@@ -31,18 +31,17 @@ df.isnull().sum()
 df['country'].head()
 df.loc[df.groupby(['country'])['date'].idxmax()]
 
-for i in df.columns:
-    df.i.unique()
-    df.i.value_counts()
-
 ## daily vaccinations and daily vaccinations raw
 dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
            'daily_vaccinations_raw', 'daily_vaccinations']].copy()
 #filling values upwards in total_vaccinations by country
 dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country']).transform(lambda x:x.bfill()))
+#identifying na values
+dvac['nan_values'] = dvac['total_vaccinations'].isnull().groupby([dvac['country'],dvac['fup']]).transform('sum') #instead of people vaccinated
+dvac.loc[dvac.nan_values > 0, 'nan_values'] += 1
 
 
-#if dvac['nan_values'] > 0:
+
 dvac.loc[dvac['nan_values'] > 0, 'new_avg2'] = dvac['nan_values'] + 1
 dvac['new_avg'] = dvac['fup']/(dvac['nan_values']+1)
 
