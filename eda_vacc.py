@@ -39,7 +39,12 @@ dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country']).transform(lam
 #identifying na values
 dvac['nan_values'] = dvac['total_vaccinations'].isnull().groupby([dvac['country'],dvac['fup']]).transform('sum') #instead of people vaccinated
 dvac.loc[dvac.nan_values > 0, 'nan_values'] += 1
+#completing values in daily vaccinations raw
+dvac.loc[dvac.nan_values != 0, 'avg_nan'] = dvac['fup'].groupby([dvac['country'],dvac['fup']])
 
+#groubby country,fup
+#if nan_values == 0:
+    #new value = substract first value - last one in fup
 
 
 dvac.loc[dvac['nan_values'] > 0, 'new_avg2'] = dvac['nan_values'] + 1
