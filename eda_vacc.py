@@ -5,6 +5,7 @@ Editor de Spyder
 Este es un archivo temporal.
 """
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.io as pio 
 pio.renderers.default='browser'
@@ -18,7 +19,6 @@ S etoy informatsiyei, mozhno vyasnit' kto postavit' bol'sche vaktsinii
 - Tile graph (geom_tile) in plotly. Dni v mesyatsyakh
 """
 
-
 file_path = "country_vaccinations.csv\country_vaccinations.csv"
 df = pd.read_csv(file_path)
 
@@ -31,40 +31,44 @@ df.isnull().sum()
 df['country'].head()
 df.loc[df.groupby(['country'])['date'].idxmax()]
 
-## daily vaccinations and daily vaccinations raw
+### Daily vaccinations and daily vaccinations raw
 dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
-           'daily_vaccinations_raw', 'daily_vaccinations']].copy()
+           'daily_vaccinations_raw', 'daily_vaccinations']].copy() #important to use copy, otherwise SettingwithCopyWarning pops up
+
 #filling values upwards in total_vaccinations by country
-dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country']).transform(lambda x:x.bfill()))
-#identifying na values
-dvac['nan_values'] = dvac['total_vaccinations'].isnull().groupby([dvac['country'],dvac['fup']]).transform('sum') #instead of people vaccinated
+dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])
+               .transform(lambda x:x.bfill())) #back fill -- fills back 'total_vaccinations' by group 'country'
+
+#identifying na values in 'total vaccinations'
+dvac['nan_values'] = (dvac['total_vaccinations'].isnull().groupby([dvac['country'],dvac['fup']]) #total_vaccinations instead of people_vaccinated. is_null affects only missing values
+                      .transform('sum')) 
 dvac.loc[dvac.nan_values > 0, 'nan_values'] += 1
-#completing values in daily vaccinations raw
-dvac.loc[dvac.nan_values != 0, 'avg_nan'] = dvac['fup'].groupby([dvac['country'],dvac['fup']])
 
-#groubby country,fup
-#if nan_values == 0:
-    #new value = substract first value - last one in fup
+#substracting new values from inmediate previous. 
+#dvac.loc[dvac.nan_values != 0, 'avg_nan'] = (dvac['fup'].diff(-1)*(-1)).shift(1) #first try. it works but it's incomplete
+dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].diff(-1)*(-1)) #'diff' calculates difference between rows. multiply by minus 1 to get positive result. can try abs())
+                                             .shift(1) #'shift' changes result to one row foward
+                                             .replace(-0, np.nan) #'replace' removes 0's with nan
+                                             .transform(lambda x:x.ffill())) #'transform' fills the nan values with substraction
+dvac['dvr_new'] = round(dvac['avg_nan']/dvac['nan_values'], 2) #round 0 here returns error in MA
+
+#completing values with data from daily_vaccinations_raw
+dvac.loc[dvac.nan_values == 0, 'dvr_new'] = dvac['daily_vaccinations_raw']
+
+#moving avg
+#dvac.dvr_new.fillna(0, inplace = True) #first try
+dvac['MA'] = round(dvac.groupby('country')['dvr_new'] #groups by 'country' and uses 'dvr_new'
+                   .rolling(window=7, min_periods=1) #takes 7 values. minimum 1 value for first values
+                   .mean(), 0).reset_index(0,drop=True) #it's the avg. needs reset_index, otherwise it won't work
 
 
-dvac.loc[dvac['nan_values'] > 0, 'new_avg2'] = dvac['nan_values'] + 1
-dvac['new_avg'] = dvac['fup']/(dvac['nan_values']+1)
-
-
-
-                      
-dvac['substract'] = dvac['fup'] - dvac['fup'].shift(1)
-
-
-
-
-
-## Find the max number of people vaccinated as of the most recent date
+### Find the max number of people vaccinated as of the most recent date
 # Columns for country, date and total vaccinates
-total_per_country = df[['country', 'date', 'people_fully_vaccinated']]
+df['country'].nunique()
+total_per_country = df[['country', 'date', 'people_fully_vaccinated']].copy()
 # Filling empty values by group with foward fill (ffill)
 total_per_country['people_fully_vaccinated'] = (total_per_country['people_fully_vaccinated'].groupby(total_per_country['country'])
-                                                                                            .transform(lambda x:x.ffill()))
+                                                .transform(lambda x:x.ffill()))
 # Filtering na values
 total_per_country.dropna(inplace=True)
 # line
