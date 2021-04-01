@@ -61,7 +61,7 @@ dvac['MA'] = round(dvac.groupby('country')['dvr_new'] #groups by 'country' and u
                    .rolling(window=7, min_periods=1) #takes 7 values. minimum 1 value for first values
                    .mean(), 0).reset_index(0,drop=True) #it's the avg. needs reset_index, otherwise it won't work
 
-
+######
 ### Find the max number of people vaccinated as of the most recent date
 # Columns for country, date and total vaccinates
 df['country'].nunique()
@@ -76,8 +76,29 @@ fig = px.line(total_per_country, x='date', y='people_fully_vaccinated', color='c
 fig.show()
 
 # Filtering latest date
-total_per_country = total_per_country[total_per_country.groupby(['country'])['date'].transform(max) == df['date']].dropna()
-                                                                                    
+total_per_country = (total_per_country[total_per_country.groupby(['country'])['date']
+                                      .transform(max) == total_per_country['date']]
+                     .dropna()
+                     .reset_index(drop=True))
+
+### Vaccines per country
+vaccine_per_country = df[['country', 'vaccines']].copy()
+vaccine_per_country.drop_duplicates(keep='first', inplace=True)
+
+#breaking 'vaccines' into different rows
+vaccine_series = vaccine_per_country['vaccines'].str.split(', ').apply(pd.Series,1).stack()
+vaccine_series.index = vaccine_series.index.droplevel(-1)
+vaccine_series.name = 'vaccines'
+
+vaccine_per_country.drop(columns=['vaccines'], inplace=True)
+vaccine_per_country = vaccine_per_country.join(vaccine_series)
+
+### Merging two datasets
+vaccined_people = pd.merge(total_per_country, vaccine_per_country, how='left', on='country')
+vaccined_people.groupby('vaccines')['country'].count()
+vaccined_people.groupby('vaccines')['people_fully_vaccinated'].mean()
+
+
 
 
 
