@@ -46,11 +46,14 @@ dvac.loc[dvac.nan_values > 0, 'nan_values'] += 1
 
 #substracting new values from inmediate previous. 
 #dvac.loc[dvac.nan_values != 0, 'avg_nan'] = (dvac['fup'].diff(-1)*(-1)).shift(1) #first try. it works but it's incomplete
-dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].diff(-1)*(-1)) #'diff' calculates difference between rows. multiply by minus 1 to get positive result. can try abs())
-                                             .shift(1) #'shift' changes result to one row foward
+dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country']]).diff(-1)*(-1)) #'diff' calculates difference between rows. multiply by minus 1 to get positive result. can try abs())
                                              .replace(-0, np.nan) #'replace' removes 0's with nan
-                                             .transform(lambda x:x.ffill())) #'transform' fills the nan values with substraction
-dvac['dvr_new'] = round(dvac['avg_nan']/dvac['nan_values'], 2) #round 0 here returns error in MA
+                                             .shift(1) #'shift' changes result to one row foward
+                                             .groupby([dvac['country']]).transform(lambda x:x.ffill())) #'transform' fills the nan values with substraction
+
+#dvac['dvr_new'] = round(dvac['avg_nan']/dvac['nan_values'], 4) #round 0 here returns error in MA
+dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values']).fillna(0)
+
 
 #completing values with data from daily_vaccinations_raw
 dvac.loc[dvac.nan_values == 0, 'dvr_new'] = dvac['daily_vaccinations_raw']
@@ -60,6 +63,12 @@ dvac.loc[dvac.nan_values == 0, 'dvr_new'] = dvac['daily_vaccinations_raw']
 dvac['MA'] = round(dvac.groupby('country')['dvr_new'] #groups by 'country' and uses 'dvr_new'
                    .rolling(window=7, min_periods=1) #takes 7 values. minimum 1 value for first values
                    .mean(), 0).reset_index(0,drop=True) #it's the avg. needs reset_index, otherwise it won't work
+
+dvac.loc[dvac.MA == 0, 'MA'] = np.nan
+
+dvac['diff'] = dvac['MA'] - dvac['daily_vaccinations']
+
+df1 = dvac[~dvac.MA.isin(df.daily_vaccinations)]
 
 ######
 ### Find the max number of people vaccinated as of the most recent date
