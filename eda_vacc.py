@@ -72,9 +72,26 @@ total_per_country['people_fully_vaccinated'] = (total_per_country['people_fully_
 # Filtering na values
 total_per_country.dropna(inplace=True)
 # line
-fig = px.line(total_per_country, x='date', y='people_fully_vaccinated', color='country')
-fig.show()
+# fig = px.line(total_per_country, x='date', y='people_fully_vaccinated', color='country')
+# fig.show()
+# Filtering latest date
+total_per_country = (total_per_country[total_per_country.groupby(['country'])['date']
+                                      .transform(max) == total_per_country['date']]
+                     .dropna()
+                     .reset_index(drop=True))
 
+### Find the max number of people vaccinated per 100 as of the most recent date
+# Columns for country, date and total vaccinates
+df['country'].nunique()
+total_per_country = df[['country', 'date', 'people_fully_vaccinated_per_hundred']].copy()
+# Filling empty values by group with foward fill (ffill)
+total_per_country['people_fully_vaccinated_per_hundred'] = (total_per_country['people_fully_vaccinated_per_hundred'].groupby(total_per_country['country'])
+                                                            .transform(lambda x:x.ffill()))
+# Filtering na values
+total_per_country.dropna(inplace=True)
+# line
+# fig = px.line(total_per_country, x='date', y='people_fully_vaccinated', color='country')
+# fig.show()
 # Filtering latest date
 total_per_country = (total_per_country[total_per_country.groupby(['country'])['date']
                                       .transform(max) == total_per_country['date']]
@@ -96,7 +113,8 @@ vaccine_per_country = vaccine_per_country.join(vaccine_series)
 ### Merging two datasets
 vaccined_people = pd.merge(total_per_country, vaccine_per_country, how='left', on='country')
 vaccined_people.groupby('vaccines')['country'].count()
-vaccined_people.groupby('vaccines')['people_fully_vaccinated'].mean()
+#vaccined_people.groupby('vaccines')['people_fully_vaccinated'].mean()
+vaccined_people.groupby('vaccines')['people_fully_vaccinated_per_hundred'].mean()
 
 
 
