@@ -6,7 +6,9 @@ Este es un archivo temporal.
 """
 import pandas as pd
 import numpy as np
+from datetime import datetime
 import plotly.express as px
+import plotly.graph_objects as go
 import plotly.io as pio 
 pio.renderers.default='browser'
 import sys
@@ -54,7 +56,6 @@ dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country
 #dvac['dvr_new'] = round(dvac['avg_nan']/dvac['nan_values'], 4) #round 0 here returns error in MA
 dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values']).fillna(0)
 
-
 #completing values with data from daily_vaccinations_raw
 dvac.loc[dvac.nan_values == 0, 'dvr_new'] = dvac['daily_vaccinations_raw']
 
@@ -70,19 +71,95 @@ dvac['diff'] = dvac['MA'] - dvac['daily_vaccinations']
 
 df1 = dvac[~dvac.MA.isin(df.daily_vaccinations)]
 
+#monthly heatmap
+dvac.dtypes
+dvac['date'] = pd.to_datetime(dvac['date'])
+dvac['weekday'] = dvac['date'].dt.dayofweek #could transform to str
+dvac['week'] = dvac['date'].dt.isocalendar().week
+dvac['week'] = dvac['week'].astype(int)
+
+dvac['week'] = dvac['week'].astype(str)
+dvac['weekday'] = dvac['weekday'].astype(str)
+
+#px.version
+dvac_alb = dvac.loc[dvac['country'] == 'Albania']
+dvac_alb = dvac_alb.drop(columns=['country','date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated', 'daily_vaccinations_raw'])
+dvac_alb2 = dvac_alb[['daily_vaccinations', 'weekday', 'week']].to_dict()
+
+
+alb_dict = {}
+for i in dvac_alb['week']:
+    for j in dvac_alb['weekday']:
+        if i in alb_dict:
+            alb_dict[i].append(j)
+        else:
+            alb_dict[i] = [j]
+
+dict_test = {1:0,
+             2:4}
+1 in dict_test
+dict_test[1].append(2)
+
+fig = px.imshow(dvac_alb2['daily_vaccinations'],
+                x = dvac_alb2['weekday'],
+                y = dvac_alb2['week'])
+fig.show()
+####
+data = {1:{6:0},
+        2:{0:64,
+           1:64,
+           2:63,
+           3:66,
+           4:62,
+           5:62,
+           6:58}}
+data_rows = list(data.values())
+data2 = []
+
+for i in range(0,len(data_rows)):
+    data2.append(list(data_rows[i].values()))
+
+fig = go.Figure(data=go.Heatmap(
+    z  = data2,
+    x = ["0","1","2","3","4","5","6"], 
+    y = ["1","2"]))
+fig.show()
+
+fig = px.imshow(data2,
+                labels = dict(x='weekday', y='week', color='total'),
+                x = ["0","1","2","3","4","5","6"],
+                y = ["1","2"])
+fig.show()
+####
+fig = px.imshow(dvac_alb.daily_vaccinations.tolist(),
+                labels = dict(x="weekday", color='daily_vaccinations'),
+                x = dvac_alb.weekday.tolist().nunique(), 
+                y = dvac_alb.week.tolist())
+fig.show()
+
+#go.version
+fig = go.Figure(data=go.Heatmap(dvac_alb.daily_vaccinations.tolist()),
+                x = dvac_alb.weekday.tolist(), 
+                y = dvac_alb.week.tolist())
+fig.show()
+
 ######
 ### Find the max number of people vaccinated as of the most recent date
 # Columns for country, date and total vaccinates
 df['country'].nunique()
 total_per_country = df[['country', 'date', 'people_fully_vaccinated']].copy()
+
 # Filling empty values by group with foward fill (ffill)
 total_per_country['people_fully_vaccinated'] = (total_per_country['people_fully_vaccinated'].groupby(total_per_country['country'])
                                                 .transform(lambda x:x.ffill()))
+
 # Filtering na values
 total_per_country.dropna(inplace=True)
-# line
+
+# line chart
 # fig = px.line(total_per_country, x='date', y='people_fully_vaccinated', color='country')
 # fig.show()
+
 # Filtering latest date
 total_per_country = (total_per_country[total_per_country.groupby(['country'])['date']
                                       .transform(max) == total_per_country['date']]
@@ -93,14 +170,18 @@ total_per_country = (total_per_country[total_per_country.groupby(['country'])['d
 # Columns for country, date and total vaccinates
 df['country'].nunique()
 total_per_country = df[['country', 'date', 'people_fully_vaccinated_per_hundred']].copy()
+
 # Filling empty values by group with foward fill (ffill)
 total_per_country['people_fully_vaccinated_per_hundred'] = (total_per_country['people_fully_vaccinated_per_hundred'].groupby(total_per_country['country'])
                                                             .transform(lambda x:x.ffill()))
+
 # Filtering na values
 total_per_country.dropna(inplace=True)
-# line
-# fig = px.line(total_per_country, x='date', y='people_fully_vaccinated', color='country')
+
+# line chart
+# fig = px.line(total_per_country, x='date', y='people_fully_vaccinated_per_hundred', color='country')
 # fig.show()
+
 # Filtering latest date
 total_per_country = (total_per_country[total_per_country.groupby(['country'])['date']
                                       .transform(max) == total_per_country['date']]
