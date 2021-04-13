@@ -84,7 +84,11 @@ dvac['weekday'] = dvac['weekday'].astype(str)
 #px.version
 dvac_alb = dvac.loc[dvac['country'] == 'Albania']
 dvac_alb = dvac_alb.drop(columns=['country','date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated', 'daily_vaccinations_raw'])
-dvac_alb2 = dvac_alb[['daily_vaccinations', 'weekday', 'week']].to_dict()
+#dvac_alb2 = dvac_alb[['daily_vaccinations', 'weekday', 'week']].to_dict()
+dvac_alb2 = dvac_alb.pivot("week","weekday","daily_vaccinations") 
+
+fig = px.imshow(dvac_alb2)
+fig.show()
 
 
 alb_dict = {}
@@ -119,12 +123,14 @@ data2 = []
 for i in range(0,len(data_rows)):
     data2.append(list(data_rows[i].values()))
 
+#works
 fig = go.Figure(data=go.Heatmap(
     z  = data2,
     x = ["0","1","2","3","4","5","6"], 
     y = ["1","2"]))
 fig.show()
 
+#doesn't works
 fig = px.imshow(data2,
                 labels = dict(x='weekday', y='week', color='total'),
                 x = ["0","1","2","3","4","5","6"],
