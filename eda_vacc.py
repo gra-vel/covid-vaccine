@@ -9,7 +9,8 @@ import numpy as np
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
-import plotly.io as pio 
+import plotly.io as pio
+from plotly.subplots import make_subplots
 pio.renderers.default='browser'
 import sys
 
@@ -71,24 +72,51 @@ dvac['diff'] = dvac['MA'] - dvac['daily_vaccinations']
 
 df1 = dvac[~dvac.MA.isin(df.daily_vaccinations)]
 
-#monthly heatmap
+### Monthly heatmap
+dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
+           'daily_vaccinations_raw', 'daily_vaccinations']].copy()
 dvac.dtypes
 dvac['date'] = pd.to_datetime(dvac['date'])
 dvac['weekday'] = dvac['date'].dt.dayofweek #could transform to str
 dvac['week'] = dvac['date'].dt.isocalendar().week
 dvac['week'] = dvac['week'].astype(int)
+dvac['month'] = dvac['date'].dt.month
 
-dvac['week'] = dvac['week'].astype(str)
-dvac['weekday'] = dvac['weekday'].astype(str)
+#dvac['week'] = dvac['week'].astype(str)
+#dvac['weekday'] = dvac['weekday'].astype(str)
 
 #px.version
 dvac_alb = dvac.loc[dvac['country'] == 'Albania']
-dvac_alb = dvac_alb.drop(columns=['country','date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated', 'daily_vaccinations_raw'])
+dvac_alb = dvac_alb.drop(columns=['country','date', 'total_vaccinations', 'people_vaccinated', 
+                                  'people_fully_vaccinated', 'daily_vaccinations_raw'])
 #dvac_alb2 = dvac_alb[['daily_vaccinations', 'weekday', 'week']].to_dict()
-dvac_alb2 = dvac_alb.pivot("week","weekday","daily_vaccinations") 
+dvac_alb2 = dvac_alb.pivot(index="week",columns="weekday", values="daily_vaccinations")
+dvac_alb2 = pd.merge(dvac_alb2, dvac_alb[['week','month']].drop_duplicates(), how='left', left_on='week', right_on='week')
+dvac_alb2.to_dict()
 
-fig = px.imshow(dvac_alb2)
+#imshow
+fig = px.imshow(dvac_alb2, facet_row="month")
 fig.show()
+
+#subplots
+fig = go.Figure(data=go.Heatmap(
+    z = dvac_alb2,
+    x = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']))
+fig.show()
+
+fig = make_subplots(2,2)
+fig.add_trace(
+    go.Heatmap(z = dvac_alb2), 1,1)
+fig.add_trace(
+    go.Heatmap(z = dvac_alb2), 1,2)
+fig.add_trace(
+    go.Heatmap(z = dvac_alb2), 2,1)
+fig.add_trace(
+    go.Heatmap(z = dvac_alb2), 2,2)
+fig.show()
+
+
+
 
 
 alb_dict = {}
