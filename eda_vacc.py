@@ -97,6 +97,21 @@ dvac_alb2 = pd.merge(dvac_alb2, dvac_alb[['week','month']].drop_duplicates(), ho
 fig = px.imshow(dvac_alb2) #without merge
 fig.show()
 
+# def country_heatmap(df, country):
+#     df = df.loc[df['country'] == country]
+#     df = df.drop(columns=['country','date', 'total_vaccinations', 'people_vaccinated', 
+#                                   'people_fully_vaccinated', 'daily_vaccinations_raw'])
+#     df = df.pivot(index='week', columns='weekday', values='daily_vaccinations')
+#     fig = go.Figure(data=go.Heatmap(
+#         z = df,
+#         x = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']))
+#     fig.update_yaxes(autorange="reversed")
+#     fig.update_xaxes(side="top")
+#     fig.update_layout(
+#         height=85 * len(df[0]), #len(df[0])
+#         width=600)
+#     fig.show()
+
 def country_heatmap(df, country):
     df = df.loc[df['country'] == country]
     df = df.drop(columns=['country','date', 'total_vaccinations', 'people_vaccinated', 
@@ -106,13 +121,15 @@ def country_heatmap(df, country):
         z = df,
         x = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']))
     fig.update_yaxes(autorange="reversed")
+    fig.update_xaxes(side="top")
     fig.update_layout(
         height=85 * len(df[0]), #len(df[0])
-        width=600)
+        width=600,
+        title='Daily vaccinations in '+ country)
     fig.show()
-    
-country_heatmap(dvac, 'Anguilla')
-len(dvac_alb2[0])*85
+
+country_heatmap(dvac, 'Austria')
+
 # =============================================================================
 # #subplots
 # fig = go.Figure(data=go.Heatmap(
