@@ -79,7 +79,7 @@ dvac.dtypes
 dvac['date'] = pd.to_datetime(dvac['date'])
 dvac['weekday'] = dvac['date'].dt.dayofweek #could transform to str
 dvac['week'] = dvac['date'].dt.isocalendar().week
-dvac['week'] = dvac['week'].astype(int)
+dvac['week'] = dvac['week'].astype('int64') 
 dvac['month'] = dvac['date'].dt.month
 
 #dvac['week'] = dvac['week'].astype(str)
@@ -92,28 +92,84 @@ dvac_alb = dvac_alb.drop(columns=['country','date', 'total_vaccinations', 'peopl
 #dvac_alb2 = dvac_alb[['daily_vaccinations', 'weekday', 'week']].to_dict()
 dvac_alb2 = dvac_alb.pivot(index="week",columns="weekday", values="daily_vaccinations")
 dvac_alb2 = pd.merge(dvac_alb2, dvac_alb[['week','month']].drop_duplicates(), how='left', left_on='week', right_on='week')
-dvac_alb2.to_dict()
 
 #imshow
-fig = px.imshow(dvac_alb2, facet_row="month")
+fig = px.imshow(dvac_alb2) #without merge
 fig.show()
 
-#subplots
-fig = go.Figure(data=go.Heatmap(
-    z = dvac_alb2,
-    x = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']))
-fig.show()
+def country_heatmap(df, country):
+    df = df.loc[df['country'] == country]
+    df = df.drop(columns=['country','date', 'total_vaccinations', 'people_vaccinated', 
+                                  'people_fully_vaccinated', 'daily_vaccinations_raw'])
+    df = df.pivot(index='week', columns='weekday', values='daily_vaccinations')
+    fig = go.Figure(data=go.Heatmap(
+        z = df,
+        x = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']))
+    fig.update_yaxes(autorange="reversed")
+    fig.update_layout(
+        height=85 * len(df[0]), #len(df[0])
+        width=600)
+    fig.show()
+    
+country_heatmap(dvac, 'Anguilla')
+len(dvac_alb2[0])*85
+# =============================================================================
+# #subplots
+# fig = go.Figure(data=go.Heatmap(
+#     z = dvac_alb2,
+#     x = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']))
+# fig.show()
+# 
+# fig = make_subplots(2,2)
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2), 1,1)
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2), 1,2)
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2), 2,1)
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2), 2,2)
+# fig.show()
+# 
+# #first version
+# fig = make_subplots(1,3) #three columns for each quarter
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==1, 0:6], coloraxis='coloraxis'), 1,1)
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==2, 0:6], coloraxis='coloraxis'), 1,2)
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==3, 0:6], coloraxis='coloraxis'), 1,3)
+# #fig.update_layout(coloraxis = {'colorscale':'viridis'})
+# fig.show()
+# 
+# #second version
+# fig = make_subplots(1,3) 
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==1, 0:6], y=dvac_alb2.loc[dvac_alb2['month']==1, ['week']], 
+#                zmin=0, zmax=1000), 1,1)
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==2, 0:6], y=dvac_alb2.loc[dvac_alb2['month']==2, ['week']],
+#                zmin=0, zmax=1000), 1,2)
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==3, 0:6], y=dvac_alb2.loc[dvac_alb2['month']==3, ['week']],
+#                zmin=0, zmax=1000), 1,3)
+# fig.show()
+# 
+# #third version
+# fig = make_subplots(rows=1, cols=3, print_grid=True, shared_yaxes=True) 
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==1, 0:6], y=['a','b','c','d'],
+#                 zmin=0, zmax=1000), 1,1)
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==2, 0:6], #, y=['1','2','3','4']
+#                 zmin=0, zmax=1000), 1,2)
+# fig.add_trace(
+#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==3, 0:6], #, y=['1','2','3']
+#                 zmin=0, zmax=1000, connectgaps=False), 1,3)
+# fig.update_yaxes(autorange="reversed")
+# =============================================================================
 
-fig = make_subplots(2,2)
-fig.add_trace(
-    go.Heatmap(z = dvac_alb2), 1,1)
-fig.add_trace(
-    go.Heatmap(z = dvac_alb2), 1,2)
-fig.add_trace(
-    go.Heatmap(z = dvac_alb2), 2,1)
-fig.add_trace(
-    go.Heatmap(z = dvac_alb2), 2,2)
-fig.show()
+
 
 
 
