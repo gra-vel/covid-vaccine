@@ -6,7 +6,8 @@ Este es un archivo temporal.
 """
 import pandas as pd
 import numpy as np
-from datetime import datetime
+import datetime
+#from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -93,162 +94,120 @@ dvac_alb = dvac_alb.drop(columns=['country','date', 'total_vaccinations', 'peopl
 dvac_alb2 = dvac_alb.pivot(index="week",columns="weekday", values="daily_vaccinations")
 dvac_alb2 = pd.merge(dvac_alb2, dvac_alb[['week','month']].drop_duplicates(), how='left', left_on='week', right_on='week')
 
-#imshow
-fig = px.imshow(dvac_alb2) #without merge
-fig.show()
 
-# def country_heatmap(df, country):
-#     df = df.loc[df['country'] == country]
-#     df = df.drop(columns=['country','date', 'total_vaccinations', 'people_vaccinated', 
-#                                   'people_fully_vaccinated', 'daily_vaccinations_raw'])
-#     df = df.pivot(index='week', columns='weekday', values='daily_vaccinations')
-#     fig = go.Figure(data=go.Heatmap(
-#         z = df,
-#         x = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']))
-#     fig.update_yaxes(autorange="reversed")
-#     fig.update_xaxes(side="top")
-#     fig.update_layout(
-#         height=85 * len(df[0]), #len(df[0])
-#         width=600)
-#     fig.show()
 
-def country_heatmap(df, country):
+#second version
+dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
+           'daily_vaccinations_raw', 'daily_vaccinations']].copy()
+
+def country_heatmap(country, vactype, df=dvac):
+    df['date'] = pd.to_datetime(df['date']).apply(lambda x: x.date())
     df = df.loc[df['country'] == country]
-    df = df.drop(columns=['country','date', 'total_vaccinations', 'people_vaccinated', 
-                                  'people_fully_vaccinated', 'daily_vaccinations_raw'])
-    df = df.pivot(index='week', columns='weekday', values='daily_vaccinations')
-    fig = go.Figure(data=go.Heatmap(
-        z = df,
-        x = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']))
-    fig.update_yaxes(autorange="reversed")
-    fig.update_xaxes(side="top")
-    fig.update_layout(
-        height=85 * len(df[0]), #len(df[0])
-        width=600,
-        title='Daily vaccinations in '+ country)
+    start_date = min(df['date'])
+    last_date = max(df['date'])
+    timeperiod = last_date-start_date
+    country_calendar = [start_date + datetime.timedelta(i) for i in range(timeperiod.days+1)]
+    weekdays = [i.weekday() for i in country_calendar]
+    weeknumber = [(i.strftime('%V')) for i in country_calendar]
+    if vactype=='dv':
+        test_data = df['daily_vaccinations']
+    elif vactype=='dvr':
+        test_data = df['daily_vaccinations_raw']
+    text = [str(i) for i in country_calendar]
+    data=[
+      go.Heatmap(
+          x=weekdays,
+          y=weeknumber,
+          z=test_data,
+          text=text,
+          xgap=1,
+          ygap=1,
+          showscale=False,
+          colorscale='viridis'
+          )
+      ]
+    layout = go.Layout(
+    title = "Random Calendar",    
+    xaxis=dict(        
+        tickmode="array",
+        ticktext=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+        tickvals=[0,1,2,3,4,5,6],
+        title="Days",
+        side="top"        
+        ),
+    yaxis=dict(        
+        title="Week Nr.",
+        autorange="reversed"
+        )
+    )
+    fig = go.Figure(data=data, layout=layout)
     fig.show()
+    
+country_heatmap("Germany","dvr")
 
-country_heatmap(dvac, 'Austria')
-
-# =============================================================================
-# #subplots
-# fig = go.Figure(data=go.Heatmap(
-#     z = dvac_alb2,
-#     x = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']))
-# fig.show()
-# 
-# fig = make_subplots(2,2)
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2), 1,1)
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2), 1,2)
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2), 2,1)
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2), 2,2)
-# fig.show()
-# 
-# #first version
-# fig = make_subplots(1,3) #three columns for each quarter
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==1, 0:6], coloraxis='coloraxis'), 1,1)
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==2, 0:6], coloraxis='coloraxis'), 1,2)
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==3, 0:6], coloraxis='coloraxis'), 1,3)
-# #fig.update_layout(coloraxis = {'colorscale':'viridis'})
-# fig.show()
-# 
-# #second version
-# fig = make_subplots(1,3) 
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==1, 0:6], y=dvac_alb2.loc[dvac_alb2['month']==1, ['week']], 
-#                zmin=0, zmax=1000), 1,1)
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==2, 0:6], y=dvac_alb2.loc[dvac_alb2['month']==2, ['week']],
-#                zmin=0, zmax=1000), 1,2)
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==3, 0:6], y=dvac_alb2.loc[dvac_alb2['month']==3, ['week']],
-#                zmin=0, zmax=1000), 1,3)
-# fig.show()
-# 
-# #third version
-# fig = make_subplots(rows=1, cols=3, print_grid=True, shared_yaxes=True) 
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==1, 0:6], y=['a','b','c','d'],
-#                 zmin=0, zmax=1000), 1,1)
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==2, 0:6], #, y=['1','2','3','4']
-#                 zmin=0, zmax=1000), 1,2)
-# fig.add_trace(
-#     go.Heatmap(z = dvac_alb2.loc[dvac_alb2['month']==3, 0:6], #, y=['1','2','3']
-#                 zmin=0, zmax=1000, connectgaps=False), 1,3)
-# fig.update_yaxes(autorange="reversed")
-# =============================================================================
-
-
-
-
-
-
-
-alb_dict = {}
-for i in dvac_alb['week']:
-    for j in dvac_alb['weekday']:
-        if i in alb_dict:
-            alb_dict[i].append(j)
-        else:
-            alb_dict[i] = [j]
-
-dict_test = {1:0,
-             2:4}
-1 in dict_test
-dict_test[1].append(2)
-
-fig = px.imshow(dvac_alb2['daily_vaccinations'],
-                x = dvac_alb2['weekday'],
-                y = dvac_alb2['week'])
-fig.show()
 ####
-data = {1:{6:0},
-        2:{0:64,
-           1:64,
-           2:63,
-           3:66,
-           4:62,
-           5:62,
-           6:58}}
-data_rows = list(data.values())
-data2 = []
+dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
+           'daily_vaccinations_raw', 'daily_vaccinations']].copy()
+dvac.dtypes
+dvac['date'] = pd.to_datetime(dvac['date']).apply(lambda x: x.date())
 
-for i in range(0,len(data_rows)):
-    data2.append(list(data_rows[i].values()))
+dvac_alb = dvac.loc[dvac['country'] == 'Australia']
 
-#works
-fig = go.Figure(data=go.Heatmap(
-    z  = data2,
-    x = ["0","1","2","3","4","5","6"], 
-    y = ["1","2"]))
+start_date = min(dvac_alb['date']) #
+last_date = max(dvac_alb['date']) #
+
+timeperiod = last_date-start_date
+
+country_calendar = [start_date + datetime.timedelta(i) for i in range(timeperiod.days+1)]
+weekdays = [i.weekday() for i in country_calendar]
+weeknumber = [(i.strftime('%V')) for i in country_calendar]
+#weeknumber = [int(i.strftime('%V')) for i in country_calendar]
+test_data = dvac_alb['daily_vaccinations']
+#test_data = np.random.uniform(low=0.0, high=1.0, size=len(country_calendar))
+text = [str(i) for i in country_calendar]
+
+data=[
+      go.Heatmap(
+          x=weekdays,
+          y=weeknumber,
+          z=test_data,
+          text=text,
+          xgap=1,
+          ygap=1,
+          showscale=False,          
+          )
+      ]
+layout = go.Layout(
+    title = "Random Calendar",
+    #height=1000,
+    xaxis=dict(
+        #showline=True,
+        tickmode="array",
+        ticktext=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+        tickvals=[0,1,2,3,4,5,6],
+        title="Days",
+        side="top"        
+        ),
+    yaxis=dict(
+        #showline=True,
+        title="Week Nr.",
+        autorange="reversed"
+        )
+    )
+
+fig = go.Figure(data=data, layout=layout)
 fig.show()
 
-#doesn't works
-fig = px.imshow(data2,
-                labels = dict(x='weekday', y='week', color='total'),
-                x = ["0","1","2","3","4","5","6"],
-                y = ["1","2"])
-fig.show()
-####
-fig = px.imshow(dvac_alb.daily_vaccinations.tolist(),
-                labels = dict(x="weekday", color='daily_vaccinations'),
-                x = dvac_alb.weekday.tolist().nunique(), 
-                y = dvac_alb.week.tolist())
-fig.show()
 
-#go.version
-fig = go.Figure(data=go.Heatmap(dvac_alb.daily_vaccinations.tolist()),
-                x = dvac_alb.weekday.tolist(), 
-                y = dvac_alb.week.tolist())
-fig.show()
+
+
+
+
+
+
+
+
+
 
 ######
 ### Find the max number of people vaccinated as of the most recent date
