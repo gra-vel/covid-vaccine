@@ -76,113 +76,55 @@ df1 = dvac[~dvac.MA.isin(df.daily_vaccinations)]
 ### Monthly heatmap
 dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
            'daily_vaccinations_raw', 'daily_vaccinations']].copy()
-dvac.dtypes
-dvac['date'] = pd.to_datetime(dvac['date'])
-dvac['weekday'] = dvac['date'].dt.dayofweek #could transform to str
-dvac['week'] = dvac['date'].dt.isocalendar().week
-dvac['week'] = dvac['week'].astype('int64') 
-dvac['month'] = dvac['date'].dt.month
-
-#dvac['week'] = dvac['week'].astype(str)
-#dvac['weekday'] = dvac['weekday'].astype(str)
-
-#px.version
-dvac_alb = dvac.loc[dvac['country'] == 'Albania']
-dvac_alb = dvac_alb.drop(columns=['country','date', 'total_vaccinations', 'people_vaccinated', 
-                                  'people_fully_vaccinated', 'daily_vaccinations_raw'])
-#dvac_alb2 = dvac_alb[['daily_vaccinations', 'weekday', 'week']].to_dict()
-dvac_alb2 = dvac_alb.pivot(index="week",columns="weekday", values="daily_vaccinations")
-dvac_alb2 = pd.merge(dvac_alb2, dvac_alb[['week','month']].drop_duplicates(), how='left', left_on='week', right_on='week')
-
-
-
-#second version
-dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
-           'daily_vaccinations_raw', 'daily_vaccinations']].copy()
-
-def country_heatmap(country, vactype, df=dvac):
-    df['date'] = pd.to_datetime(df['date']).apply(lambda x: x.date())
-    df = df.loc[df['country'] == country]
-    start_date = min(df['date'])
-    last_date = max(df['date'])
-    timeperiod = last_date-start_date
-    country_calendar = [start_date + datetime.timedelta(i) for i in range(timeperiod.days+1)]
-    weekdays = [i.weekday() for i in country_calendar]
-    weeknumber = [(i.strftime('%V')) for i in country_calendar]
-    if vactype=='dv':
-        test_data = df['daily_vaccinations']
-    elif vactype=='dvr':
-        test_data = df['daily_vaccinations_raw']
-    text = [str(i) for i in country_calendar]
-    data=[
-      go.Heatmap(
-          x=weekdays,
-          y=weeknumber,
-          z=test_data,
-          text=text,
-          xgap=1,
-          ygap=1,
-          showscale=False,
-          colorscale='viridis'
-          )
-      ]
-    layout = go.Layout(
-    title = "Random Calendar",    
-    xaxis=dict(        
-        tickmode="array",
-        ticktext=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
-        tickvals=[0,1,2,3,4,5,6],
-        title="Days",
-        side="top"        
-        ),
-    yaxis=dict(        
-        title="Week Nr.",
-        autorange="reversed"
-        )
-    )
-    fig = go.Figure(data=data, layout=layout)
-    fig.show()
-    
-country_heatmap("Germany","dvr")
-
 
 def country_heatmap(country, df=dvac):
+    df = df.loc[df['country'] == country].copy()
+    #time period
     df['date'] = pd.to_datetime(df['date']).apply(lambda x: x.date())
-    df = df.loc[df['country'] == country]
     start_date = min(df['date'])
     last_date = max(df['date'])
     timeperiod = last_date-start_date
+    #weekdays and week number
     country_calendar = [start_date + datetime.timedelta(i) for i in range(timeperiod.days+1)]
     weekdays = [i.weekday() for i in country_calendar]
     weeknumber = [(i.strftime('%V')) for i in country_calendar]
-    test_data1 = df['daily_vaccinations']
-    test_data2 = df['daily_vaccinations_raw']
+    #z
+    vc = df['daily_vaccinations']
+    vcr = df['daily_vaccinations_raw']
+    #annotation
     text = [str(i) for i in country_calendar]
+    #subplots
     fig = make_subplots(1,2, 
                         shared_yaxes=False,
                         subplot_titles=('daily_vaccinations','daily_vaccinations_raw'))
+    #daily_vaccinations heatmap
     fig.add_trace(
         go.Heatmap(
             x=weekdays,
             y=weeknumber,
-            z=test_data1,
+            z=vc,
             text=text,
-            xgap=1,
-            ygap=1,
+            xgap=2,
+            ygap=2,
             showscale=False,
-            colorscale='viridis'),1,1)
+            colorscale='viridis',
+            hovertemplate='Weekday: %{x}<br>Week number: %{y}<br>Vaccinations: %{z}<br>Date: %{text}<extra></extra>'),1,1) 
+    #daily_vaccinations_raw heatmap
     fig.add_trace(
         go.Heatmap(
             x=weekdays,
             y=weeknumber,
-            z=test_data2,
+            z=vcr,
             text=text,
-            xgap=1,
-            ygap=1,
+            xgap=2,
+            ygap=2,
             showscale=False,
-            colorscale='viridis'),1,2)
+            colorscale='viridis',
+            hovertemplate='Weekday: %{x}<br>Week number: %{y}<br>Vaccinations: %{z}<br>Date: %{text}<extra></extra>'),1,2)
+    
     fig.update_layout(
-        title = "Random Calendar",        
+        title = country,
+        plot_bgcolor = ('rgb(255,255,255)')
         )
     fig.layout.annotations[0].update(y=1.05)
     fig.layout.annotations[1].update(y=1.05)
@@ -201,13 +143,6 @@ def country_heatmap(country, df=dvac):
     fig.show()
 
 country_heatmap('Israel')
-
-
-
-
-
-
-
 
 
 ######
