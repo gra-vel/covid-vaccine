@@ -24,6 +24,7 @@ S etoy informatsiyei, mozhno vyasnit' kto postavit' bol'sche vaktsinii
 """
 
 file_path = "country_vaccinations.csv\country_vaccinations.csv"
+#file_path = "country_vaccinations.csv\country_vaccinations2.csv"
 df = pd.read_csv(file_path)
 
 df.shape
@@ -142,8 +143,7 @@ def country_heatmap(country, df=dvac):
     #print(fig.layout)
     fig.show()
 
-country_heatmap('Israel')
-
+country_heatmap('Ecuador')
 
 ######
 ### Find the max number of people vaccinated as of the most recent date
