@@ -45,7 +45,7 @@ dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])
                .transform(lambda x:x.bfill())) #back fill -- fills back 'total_vaccinations' by group 'country'
 
 #identifying na values in 'total vaccinations'
-dvac['nan_values'] = (dvac['total_vaccinations'].isnull().groupby([dvac['country'],dvac['fup']]) #total_vaccinations instead of people_vaccinated. is_null affects only missing values
+dvac['nan_values'] = (dvac['total_vaccinations'].isnull().groupby([dvac['country'],dvac['fup']]) #total_vaccinations instead of people_vaccinated. is_null affects only missing values 
                       .transform('sum')) 
 dvac.loc[dvac.nan_values > 0, 'nan_values'] += 1
 
@@ -58,6 +58,9 @@ dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country
 
 #dvac['dvr_new'] = round(dvac['avg_nan']/dvac['nan_values'], 4) #round 0 here returns error in MA
 dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values']).fillna(0)
+# dvac['dvr_new'] = np.where(dvac['nan_values'] == 0,
+#                            (dvac['avg_nan']/dvac['nan_values']).fillna(0),
+#                            dvac['dvr_new'].transform)
 
 #completing values with data from daily_vaccinations_raw
 dvac.loc[dvac.nan_values == 0, 'dvr_new'] = dvac['daily_vaccinations_raw']
