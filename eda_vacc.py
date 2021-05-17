@@ -14,6 +14,7 @@ import plotly.io as pio
 from plotly.subplots import make_subplots
 pio.renderers.default='browser'
 import sys
+import json
 
 sys.exit("Noooooo!. Con el F9")
 
@@ -43,10 +44,13 @@ dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people
 #filling values upwards in total_vaccinations by country
 dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])
                .transform(lambda x:x.bfill())) #back fill -- fills back 'total_vaccinations' by group 'country'
+dvac['fup'] = np.where(((dvac['country'] == 'Senegal') & (dvac['date'] == '2021-03-14')),
+                       0,
+                       dvac['fup']) #changes value for Senegal
 
 #identifying na values in 'total vaccinations'
-dvac['nan_values'] = (dvac['total_vaccinations'].isnull().groupby([dvac['country'],dvac['fup']]) #total_vaccinations instead of people_vaccinated. is_null affects only missing values 
-                      .transform('sum')) 
+dvac['nan_values'] = (dvac['total_vaccinations'].isnull().groupby([dvac['country'],dvac['fup']]) #daily_vaccinations_raw instead of people_vaccinated. is_null affects only missing values 
+                      .transform('sum'))
 dvac.loc[dvac.nan_values > 0, 'nan_values'] += 1
 
 #substracting new values from inmediate previous. 
@@ -64,6 +68,9 @@ dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values']).fillna(0)
 
 #completing values with data from daily_vaccinations_raw
 dvac.loc[dvac.nan_values == 0, 'dvr_new'] = dvac['daily_vaccinations_raw']
+dvac['dvr_new'] = np.where((dvac['country'] == 'Guinea') & (dvac['dvr_new'] == 0),
+                           np.nan,
+                           dvac['dvr_new']) 
 
 #moving avg
 #dvac.dvr_new.fillna(0, inplace = True) #first try
@@ -211,7 +218,8 @@ vaccined_people.groupby('vaccines')['country'].count()
 #vaccined_people.groupby('vaccines')['people_fully_vaccinated'].mean()
 vaccined_people.groupby('vaccines')['people_fully_vaccinated_per_hundred'].mean()
 
-
+vaccined_people2 = pd.merge(vaccined_people, df[['country','iso_code']].copy().drop_duplicates(), 
+                            how='left', on='country')
 
 
 
@@ -220,4 +228,15 @@ df1 = df[['country', 'date', 'people_fully_vaccinated']]
 total_per_country.fillna(method='ffill', inplace=True)
 total_per_country.loc[total_per_country.groupby(['country'])['people_fully_vaccinated'].idxmax()]
 total_per_country.groupby(['country'], sort=False)['date'].max()
+
+### GeoJSON map
+
+path_fle='C:/Users/G3/Documents/Gabriel/Profile/Projects/covid_vaccine/custom.geo.json'
+with open(path_fle,'r') as fle:
+    wmap = json.load(fle)
+
+fig = px.choropleth(vaccined_people2, locations='iso_code',
+                           color = 'people_fully_vaccinated_per_hundred',
+                           projection = 'natural earth')
+fig.show()
 
