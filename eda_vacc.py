@@ -213,7 +213,7 @@ vaccine_per_country.drop(columns=['vaccines'], inplace=True)
 vaccine_per_country = vaccine_per_country.join(vaccine_series)
 
 ### Merging two datasets
-vaccined_people = pd.merge(total_per_country, vaccine_per_country, how='left', on='country')
+vaccined_people = pd.merge(vaccine_per_country, total_per_country, how='left', on='country')
 vaccined_people.groupby('vaccines')['country'].count()
 #vaccined_people.groupby('vaccines')['people_fully_vaccinated'].mean()
 vaccined_people.groupby('vaccines')['people_fully_vaccinated_per_hundred'].mean()
@@ -230,13 +230,93 @@ total_per_country.loc[total_per_country.groupby(['country'])['people_fully_vacci
 total_per_country.groupby(['country'], sort=False)['date'].max()
 
 ### GeoJSON map
+vaccined_people2.loc[vaccined_people2.vaccines=='Sinovac']
 
-path_fle='C:/Users/G3/Documents/Gabriel/Profile/Projects/covid_vaccine/custom.geo.json'
-with open(path_fle,'r') as fle:
-    wmap = json.load(fle)
+fig = px.choropleth(vaccined_people2.loc[vaccined_people2.vaccines=='Sinovac'], locations='iso_code',
+                    color = 'vaccines',
+                    projection = 'natural earth')
 
-fig = px.choropleth(vaccined_people2, locations='iso_code',
-                           color = 'people_fully_vaccinated_per_hundred',
-                           projection = 'natural earth')
+########################
+
+
+vaccines_list = vaccined_people2['vaccines'].drop_duplicates().to_list()
+visible = np.array(vaccines_list)
+
+traces = []
+buttons = []
+for vac in vaccines_list:
+    traces.append(go.Choropleth(
+        locations = vaccined_people2['iso_code'],
+        z = vaccined_people2.loc[vaccined_people2.vaccines==vac],
+        #color = ''
+        colorbar_title = vac,
+        visible = True if vac == vaccines_list[0] else False))
+    
+    buttons.append(dict(label=vac,
+                        method='update',
+                        args=[{'visible':list(visible==vac)},
+                              {'title':f'<b>{vac}</b>'}]))
+    
+updatemenus = [{"active":0,
+                "buttons":buttons,
+               }]
+
+fig = go.Figure(data=traces,
+                layout=dict(updatemenus=updatemenus))
+# This is in order to get the first title displayed correctly
+first_title = vaccines_list[0]
+fig.update_layout(title=f"<b>{first_title}</b>",title_x=0.5)
 fig.show()
+
+#########
+
+vaccines_list = vaccined_people2['vaccines'].drop_duplicates().to_list()
+visible = np.array(vaccines_list)
+
+traces = []
+buttons = []
+
+fig = px.choropleth()
+
+for vac in vaccines_list:
+    fig.add_trace(px.choropleth(
+        vaccined_people2.loc[vaccined_people2.vaccines==vac],
+        locations = 'iso_code',
+        color = 'vaccines',        
+        hover_data=['country','vaccines'],        
+        projection = 'natural earth').data[0])        
+    
+    buttons.append(dict(label=vac,
+                        method='update',
+                        args=[{'visible':list(visible==vac)}, 
+                              {'title':f'<b>{vac}</b>'}]))
+    
+# updatemenus = [{"active":0,
+#                 "buttons":buttons,
+#                }]
+
+updatemenus = [dict(type = 'buttons',
+                    active = 0,
+                    showactive=True,
+                    direction = 'down', 
+                    xanchor = 'left', 
+                    yanchor = 'top', 
+                    x = 1, 
+                    y = 1, 
+                    font = dict(size=9, color='#000000'),
+                    buttons = buttons)
+               ]
+
+# This is in order to get the first title displayed correctly
+first_title = vaccines_list[0]
+fig.update_layout(title=f"<b>{first_title}</b>",title_x=0.5,
+                  updatemenus=updatemenus,
+                  showlegend = False)
+fig.show()
+
+
+
+
+
+
 
