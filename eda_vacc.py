@@ -220,7 +220,7 @@ vaccined_people.groupby('vaccines')['people_fully_vaccinated_per_hundred'].mean(
 
 vaccined_people2 = pd.merge(vaccined_people, df[['country','iso_code']].copy().drop_duplicates(), 
                             how='left', on='country')
-
+vaccined_people2['valz'] = 1
 
 
 # separate total vaccinated and max date. merge them
@@ -241,31 +241,52 @@ fig = px.choropleth(vaccined_people2.loc[vaccined_people2.vaccines=='Sinovac'], 
 
 vaccines_list = vaccined_people2['vaccines'].drop_duplicates().to_list()
 visible = np.array(vaccines_list)
+vaccined_people2['text'] = vaccined_people2['country'] + '<br>' + vaccined_people2['vaccines']
 
 traces = []
 buttons = []
 for vac in vaccines_list:
     traces.append(go.Choropleth(
-        locations = vaccined_people2['iso_code'],
-        z = vaccined_people2.loc[vaccined_people2.vaccines==vac],
-        #color = ''
-        colorbar_title = vac,
+        locations = vaccined_people2.loc[vaccined_people2.vaccines==vac]['iso_code'],
+        z = vaccined_people2.loc[vaccined_people2.vaccines==vac]['valz'],
+        coloraxis = 'coloraxis',
+        colorscale = 'Blues',
+        autocolorscale = False,
+        marker_line_color = 'white',
+        #hoverinfo = None,
+        text = vaccined_people2.loc[vaccined_people2.vaccines==vac]['text'],
         visible = True if vac == vaccines_list[0] else False))
     
     buttons.append(dict(label=vac,
                         method='update',
                         args=[{'visible':list(visible==vac)},
-                              {'title':f'<b>{vac}</b>'}]))
+                              {'title':f'<b>Countries using {vac}</b>'}]))
     
-updatemenus = [{"active":0,
-                "buttons":buttons,
-               }]
+# updatemenus = [{"active":0,
+#                 "buttons":buttons                
+#                }]
+
+updatemenus = [dict(type = 'buttons',
+                    active = 0,
+                    showactive=True,
+                    direction = 'down', 
+                    xanchor = 'left', 
+                    yanchor = 'top', 
+                    x = -0.01, 
+                    y = 1, 
+                    font = dict(size=9, color='#000000'),
+                    buttons = buttons)
+               ]
+
 
 fig = go.Figure(data=traces,
-                layout=dict(updatemenus=updatemenus))
+                layout=dict(updatemenus=updatemenus,
+                            coloraxis=dict(colorscale='Blues')))
 # This is in order to get the first title displayed correctly
 first_title = vaccines_list[0]
-fig.update_layout(title=f"<b>{first_title}</b>",title_x=0.5)
+fig.update_layout(title=f"<b>Countries using {first_title}</b>",title_x=0.5,
+                  coloraxis_showscale=False,                  
+                  showlegend = False)
 fig.show()
 
 #########
@@ -290,10 +311,6 @@ for vac in vaccines_list:
                         method='update',
                         args=[{'visible':list(visible==vac)}, 
                               {'title':f'<b>{vac}</b>'}]))
-    
-# updatemenus = [{"active":0,
-#                 "buttons":buttons,
-#                }]
 
 updatemenus = [dict(type = 'buttons',
                     active = 0,
@@ -314,7 +331,11 @@ fig.update_layout(title=f"<b>{first_title}</b>",title_x=0.5,
                   showlegend = False)
 fig.show()
 
+# updatemenus = [{"active":0,
+#                 "buttons":buttons,
+#                }]
 
+#########
 
 
 
