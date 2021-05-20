@@ -14,7 +14,6 @@ import plotly.io as pio
 from plotly.subplots import make_subplots
 pio.renderers.default='browser'
 import sys
-import json
 
 sys.exit("Noooooo!. Con el F9")
 
@@ -26,6 +25,7 @@ S etoy informatsiyei, mozhno vyasnit' kto postavit' bol'sche vaktsinii
 
 file_path = "country_vaccinations.csv\country_vaccinations.csv"
 #file_path = "country_vaccinations.csv\country_vaccinations2.csv"
+#file_path = "country_vaccinations.csv\country_vaccinations3.csv"
 df = pd.read_csv(file_path)
 
 df.shape
@@ -42,13 +42,25 @@ dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people
            'daily_vaccinations_raw', 'daily_vaccinations']].copy() #important to use copy, otherwise SettingwithCopyWarning pops up
 
 #filling values upwards in total_vaccinations by country
-dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])
+dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])               
                .transform(lambda x:x.bfill())) #back fill -- fills back 'total_vaccinations' by group 'country'
 dvac['fup'] = np.where(((dvac['country'] == 'Senegal') & (dvac['date'] == '2021-03-14')),
-                       0,
-                       dvac['fup']) #changes value for Senegal
+                        0,
+                        dvac['fup']) #changes value for Senegal
 
+dvac['fup'] = (dvac.groupby([dvac['country'],dvac['total_vaccinations'].isnull()])
+               .transform('sum')
+               .ngroup()
+               .replace(-1,np.nan)
+               .transform(lambda x:x.bfill()))
+
+dvac['fup'] = dvac['total_vaccinations'].isnull().groupby([dvac['country'],dvac['total_vaccinations']]).transform('sum').astype('int')
+dvac['fup'] = dvac.groupby([dvac['country'],dvac['total_vaccinations']])['total_vaccinations'].isnull().transform('sum').astype('int')
+
+dvac['fup'] = dvac['total_vaccinations'].isnull()
+dvac['fup'] = dvac.groupby([dvac['country'], dvac['total_vaccinations'].isnull()])['fup'].count()
 #identifying na values in 'total vaccinations'
+
 dvac['nan_values'] = (dvac['total_vaccinations'].isnull().groupby([dvac['country'],dvac['fup']]) #daily_vaccinations_raw instead of people_vaccinated. is_null affects only missing values 
                       .transform('sum'))
 dvac.loc[dvac.nan_values > 0, 'nan_values'] += 1
@@ -70,7 +82,7 @@ dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values']).fillna(0)
 dvac.loc[dvac.nan_values == 0, 'dvr_new'] = dvac['daily_vaccinations_raw']
 dvac['dvr_new'] = np.where((dvac['country'] == 'Guinea') & (dvac['dvr_new'] == 0),
                            np.nan,
-                           dvac['dvr_new']) 
+                           dvac['dvr_new'])  #change value for Guinea
 
 #moving avg
 #dvac.dvr_new.fillna(0, inplace = True) #first try
@@ -153,7 +165,7 @@ def country_heatmap(country, df=dvac):
     #print(fig.layout)
     fig.show()
 
-country_heatmap('Ecuador')
+country_heatmap('Russia')
 
 ######
 ### Find the max number of people vaccinated as of the most recent date
@@ -229,19 +241,10 @@ total_per_country.fillna(method='ffill', inplace=True)
 total_per_country.loc[total_per_country.groupby(['country'])['people_fully_vaccinated'].idxmax()]
 total_per_country.groupby(['country'], sort=False)['date'].max()
 
-### GeoJSON map
-vaccined_people2.loc[vaccined_people2.vaccines=='Sinovac']
-
-fig = px.choropleth(vaccined_people2.loc[vaccined_people2.vaccines=='Sinovac'], locations='iso_code',
-                    color = 'vaccines',
-                    projection = 'natural earth')
-
-########################
-
-
+### Choropleth map
 vaccines_list = vaccined_people2['vaccines'].drop_duplicates().to_list()
 visible = np.array(vaccines_list)
-vaccined_people2['text'] = vaccined_people2['country'] + '<br>' + vaccined_people2['vaccines']
+vaccined_people2['text'] = 'Country: ' + vaccined_people2['country'] + '<br>' + 'Vaccine: ' + vaccined_people2['vaccines']
 
 traces = []
 buttons = []
@@ -253,18 +256,13 @@ for vac in vaccines_list:
         colorscale = 'Blues',
         autocolorscale = False,
         marker_line_color = 'white',
-        #hoverinfo = None,
-        text = vaccined_people2.loc[vaccined_people2.vaccines==vac]['text'],
+        hovertemplate=vaccined_people2.loc[vaccined_people2.vaccines==vac]['text'] + '<extra></extra>',
         visible = True if vac == vaccines_list[0] else False))
     
     buttons.append(dict(label=vac,
                         method='update',
                         args=[{'visible':list(visible==vac)},
                               {'title':f'<b>Countries using {vac}</b>'}]))
-    
-# updatemenus = [{"active":0,
-#                 "buttons":buttons                
-#                }]
 
 updatemenus = [dict(type = 'buttons',
                     active = 0,
@@ -278,64 +276,18 @@ updatemenus = [dict(type = 'buttons',
                     buttons = buttons)
                ]
 
-
 fig = go.Figure(data=traces,
                 layout=dict(updatemenus=updatemenus,
                             coloraxis=dict(colorscale='Blues')))
-# This is in order to get the first title displayed correctly
+
 first_title = vaccines_list[0]
 fig.update_layout(title=f"<b>Countries using {first_title}</b>",title_x=0.5,
                   coloraxis_showscale=False,                  
                   showlegend = False)
+
 fig.show()
 
-#########
 
-vaccines_list = vaccined_people2['vaccines'].drop_duplicates().to_list()
-visible = np.array(vaccines_list)
-
-traces = []
-buttons = []
-
-fig = px.choropleth()
-
-for vac in vaccines_list:
-    fig.add_trace(px.choropleth(
-        vaccined_people2.loc[vaccined_people2.vaccines==vac],
-        locations = 'iso_code',
-        color = 'vaccines',        
-        hover_data=['country','vaccines'],        
-        projection = 'natural earth').data[0])        
-    
-    buttons.append(dict(label=vac,
-                        method='update',
-                        args=[{'visible':list(visible==vac)}, 
-                              {'title':f'<b>{vac}</b>'}]))
-
-updatemenus = [dict(type = 'buttons',
-                    active = 0,
-                    showactive=True,
-                    direction = 'down', 
-                    xanchor = 'left', 
-                    yanchor = 'top', 
-                    x = 1, 
-                    y = 1, 
-                    font = dict(size=9, color='#000000'),
-                    buttons = buttons)
-               ]
-
-# This is in order to get the first title displayed correctly
-first_title = vaccines_list[0]
-fig.update_layout(title=f"<b>{first_title}</b>",title_x=0.5,
-                  updatemenus=updatemenus,
-                  showlegend = False)
-fig.show()
-
-# updatemenus = [{"active":0,
-#                 "buttons":buttons,
-#                }]
-
-#########
 
 
 
