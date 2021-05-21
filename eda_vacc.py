@@ -7,8 +7,6 @@ Este es un archivo temporal.
 import pandas as pd
 import numpy as np
 import datetime
-#from datetime import datetime
-import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
@@ -44,26 +42,18 @@ dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people
 #filling values upwards in total_vaccinations by country
 dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])               
                .transform(lambda x:x.bfill())) #back fill -- fills back 'total_vaccinations' by group 'country'
-dvac['fup'] = np.where(((dvac['country'] == 'Senegal') & (dvac['date'] == '2021-03-14')),
-                        0,
-                        dvac['fup']) #changes value for Senegal
+##
 
-dvac['fup'] = (dvac.groupby([dvac['country'],dvac['total_vaccinations'].isnull()])
-               .transform('sum')
-               .ngroup()
-               .replace(-1,np.nan)
-               .transform(lambda x:x.bfill()))
-
-dvac['fup'] = dvac['total_vaccinations'].isnull().groupby([dvac['country'],dvac['total_vaccinations']]).transform('sum').astype('int')
-dvac['fup'] = dvac.groupby([dvac['country'],dvac['total_vaccinations']])['total_vaccinations'].isnull().transform('sum').astype('int')
-
-dvac['fup'] = dvac['total_vaccinations'].isnull()
-dvac['fup'] = dvac.groupby([dvac['country'], dvac['total_vaccinations'].isnull()])['fup'].count()
+### este funka!!!!! igual hay un problema con avg_nan, xq necesita usar fup. Por eso esa funcino todavia
+#esta antes. es el groupby q hace fup con valores contiguos q son los mismos
+dvac['nan_values'] = (dvac.total_vaccinations.isnull().astype(int).groupby(dvac.total_vaccinations.notnull().astype(int).cumsum())
+                       .transform('sum')
+                       .transform(lambda x:x+1 if x != 0 else 0)
+                       .shift(1))
+##
 #identifying na values in 'total vaccinations'
 
-dvac['nan_values'] = (dvac['total_vaccinations'].isnull().groupby([dvac['country'],dvac['fup']]) #daily_vaccinations_raw instead of people_vaccinated. is_null affects only missing values 
-                      .transform('sum'))
-dvac.loc[dvac.nan_values > 0, 'nan_values'] += 1
+
 
 #substracting new values from inmediate previous. 
 #dvac.loc[dvac.nan_values != 0, 'avg_nan'] = (dvac['fup'].diff(-1)*(-1)).shift(1) #first try. it works but it's incomplete
@@ -73,7 +63,7 @@ dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country
                                              .groupby([dvac['country']]).transform(lambda x:x.ffill())) #'transform' fills the nan values with substraction
 
 #dvac['dvr_new'] = round(dvac['avg_nan']/dvac['nan_values'], 4) #round 0 here returns error in MA
-dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values']).fillna(0)
+dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values']) #.fillna(0)
 # dvac['dvr_new'] = np.where(dvac['nan_values'] == 0,
 #                            (dvac['avg_nan']/dvac['nan_values']).fillna(0),
 #                            dvac['dvr_new'].transform)
