@@ -24,6 +24,7 @@ S etoy informatsiyei, mozhno vyasnit' kto postavit' bol'sche vaktsinii
 file_path = "country_vaccinations.csv\country_vaccinations.csv"
 #file_path = "country_vaccinations.csv\country_vaccinations2.csv"
 #file_path = "country_vaccinations.csv\country_vaccinations3.csv"
+#file_path = "country_vaccinations.csv\country_vaccinations4.csv"
 df = pd.read_csv(file_path)
 
 df.shape
@@ -44,12 +45,23 @@ dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])
                .transform(lambda x:x.bfill())) #back fill -- fills back 'total_vaccinations' by group 'country'
 ##
 
+dvac['fup2'] = (dvac['total_vaccinations'].groupby(dvac['country'])               
+               .transform(lambda x:x.bfill())) #back fill -- fills back 'total_vaccinations' by group 'country'
+
+dvac['test'] = (dvac.total_vaccinations.diff(1) == 0).astype('int')
+
+dvac.loc[dvac.total_vaccinations != np.nan, 'test'] = (dvac.total_vaccinations.diff(1) == 0)
+
+#esto tambien funciona para saber valores contiguos repetidos
+dvac2 = dvac.loc[dvac['total_vaccinations'].notnull()]
+dvac2.loc[dvac2.total_vaccinations != np.nan, 'test'] = (dvac2.total_vaccinations.diff(1) == 0)
+
 ### este funka!!!!! igual hay un problema con avg_nan, xq necesita usar fup. Por eso esa funcino todavia
 #esta antes. es el groupby q hace fup con valores contiguos q son los mismos
 dvac['nan_values'] = (dvac.total_vaccinations.isnull().astype(int).groupby(dvac.total_vaccinations.notnull().astype(int).cumsum())
-                       .transform('sum')
-                       .transform(lambda x:x+1 if x != 0 else 0)
-                       .shift(1))
+                      .transform('sum')
+                      .transform(lambda x:x+1 if x != 0 else 0)
+                      .shift(1))
 ##
 #identifying na values in 'total vaccinations'
 
@@ -61,6 +73,17 @@ dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country
                                              .replace(-0, np.nan) #'replace' removes 0's with nan
                                              .shift(1) #'shift' changes result to one row foward
                                              .groupby([dvac['country']]).transform(lambda x:x.ffill())) #'transform' fills the nan values with substraction
+##
+dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country'],dvac['nan_values']]).diff(-1)*(-1))
+                                             .replace(-0, np.nan) 
+                                             .shift(1) 
+                                             .groupby([dvac['country']]).transform(lambda x:x.ffill()))
+
+dvac.loc[dvac.total_vaccinations != np.nan, 'avg_nan2'] = ((dvac['fup'].groupby([dvac['country']]).diff(-1)*(-1))
+                                             .replace(-0, np.nan) 
+                                             .shift(1) 
+                                             .groupby([dvac['country']]).transform(lambda x:x.ffill()))
+##
 
 #dvac['dvr_new'] = round(dvac['avg_nan']/dvac['nan_values'], 4) #round 0 here returns error in MA
 dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values']) #.fillna(0)
