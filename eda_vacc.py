@@ -39,6 +39,17 @@ df.loc[df.groupby(['country'])['date'].idxmax()]
 ### Daily vaccinations and daily vaccinations raw
 dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
            'daily_vaccinations_raw', 'daily_vaccinations']].copy() #important to use copy, otherwise SettingwithCopyWarning pops up
+dvac['test'] = dvac.total_vaccinations.groupby(dvac.total_vaccinations).diff(1) == 0
+
+dvac['total_vaccinations'] = np.where((~dvac['total_vaccinations'].isna()) & (dvac['test'] == True),
+                                      dvac['total_vaccinations'].bfill(),
+                                      dvac['total_vaccinations'])
+
+
+dvac['total_vaccinations'] = (dvac['total_vaccinations'].groupby(dvac['country'])
+                              .transform(lambda x:x.bfill() if x.test == True else None))
+
+dvac.loc[dvac['test'] == True, 'total_vaccinations'] = dvac['total_vaccinations'].groupby(dvac['country']).bfill()
 
 #filling values upwards in total_vaccinations by country
 dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])               
@@ -46,7 +57,7 @@ dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])
 ##
 
 dvac['fup2'] = (dvac['total_vaccinations'].groupby(dvac['country'])               
-               .transform(lambda x:x.bfill())) #back fill -- fills back 'total_vaccinations' by group 'country'
+               .transform(lambda x:x.bfill())) 
 
 dvac['test'] = (dvac.total_vaccinations.diff(1) == 0).astype('int')
 
@@ -55,6 +66,8 @@ dvac.loc[dvac.total_vaccinations != np.nan, 'test'] = (dvac.total_vaccinations.d
 #esto tambien funciona para saber valores contiguos repetidos
 dvac2 = dvac.loc[dvac['total_vaccinations'].notnull()]
 dvac2.loc[dvac2.total_vaccinations != np.nan, 'test'] = (dvac2.total_vaccinations.diff(1) == 0)
+
+dvac['test'] = dvac.total_vaccinations.groupby(dvac.total_vaccinations).diff(1) == 0
 
 ### este funka!!!!! igual hay un problema con avg_nan, xq necesita usar fup. Por eso esa funcino todavia
 #esta antes. es el groupby q hace fup con valores contiguos q son los mismos
