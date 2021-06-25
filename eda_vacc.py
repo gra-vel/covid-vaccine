@@ -36,38 +36,19 @@ df.isnull().sum()
 df['country'].head()
 df.loc[df.groupby(['country'])['date'].idxmax()]
 
-### Daily vaccinations and daily vaccinations raw
+### (1) Daily vaccinations and daily vaccinations raw
 dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
            'daily_vaccinations_raw', 'daily_vaccinations']].copy() #important to use copy, otherwise SettingwithCopyWarning pops up
+
 dvac['test'] = dvac.total_vaccinations.groupby(dvac.total_vaccinations).diff(1) == 0
 
-dvac['total_vaccinations'] = np.where((~dvac['total_vaccinations'].isna()) & (dvac['test'] == True),
-                                      dvac['total_vaccinations'].bfill(),
-                                      dvac['total_vaccinations'])
 
 
-dvac['total_vaccinations'] = (dvac['total_vaccinations'].groupby(dvac['country'])
-                              .transform(lambda x:x.bfill() if x.test == True else None))
+dvac.loc[dvac['test'] == True, 'total_vaccinations'] = dvac['total_vaccinations'].transform(lambda x:x.fillna(method='bfill'))
 
-dvac.loc[dvac['test'] == True, 'total_vaccinations'] = dvac['total_vaccinations'].groupby(dvac['country']).bfill()
-
-#filling values upwards in total_vaccinations by country
+# (2) filling values upwards in total_vaccinations by country 
 dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])               
                .transform(lambda x:x.bfill())) #back fill -- fills back 'total_vaccinations' by group 'country'
-##
-
-dvac['fup2'] = (dvac['total_vaccinations'].groupby(dvac['country'])               
-               .transform(lambda x:x.bfill())) 
-
-dvac['test'] = (dvac.total_vaccinations.diff(1) == 0).astype('int')
-
-dvac.loc[dvac.total_vaccinations != np.nan, 'test'] = (dvac.total_vaccinations.diff(1) == 0)
-
-#esto tambien funciona para saber valores contiguos repetidos
-dvac2 = dvac.loc[dvac['total_vaccinations'].notnull()]
-dvac2.loc[dvac2.total_vaccinations != np.nan, 'test'] = (dvac2.total_vaccinations.diff(1) == 0)
-
-dvac['test'] = dvac.total_vaccinations.groupby(dvac.total_vaccinations).diff(1) == 0
 
 ### este funka!!!!! igual hay un problema con avg_nan, xq necesita usar fup. Por eso esa funcino todavia
 #esta antes. es el groupby q hace fup con valores contiguos q son los mismos
@@ -75,47 +56,29 @@ dvac['nan_values'] = (dvac.total_vaccinations.isnull().astype(int).groupby(dvac.
                       .transform('sum')
                       .transform(lambda x:x+1 if x != 0 else 0)
                       .shift(1))
-##
-#identifying na values in 'total vaccinations'
+
+# (3) identifying na values in 'total vaccinations'
 
 
 
-#substracting new values from inmediate previous. 
-#dvac.loc[dvac.nan_values != 0, 'avg_nan'] = (dvac['fup'].diff(-1)*(-1)).shift(1) #first try. it works but it's incomplete
+# (4) substracting new values from inmediate previous. 
 dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country']]).diff(-1)*(-1)) #'diff' calculates difference between rows. multiply by minus 1 to get positive result. can try abs())
                                              .replace(-0, np.nan) #'replace' removes 0's with nan
                                              .shift(1) #'shift' changes result to one row foward
                                              .groupby([dvac['country']]).transform(lambda x:x.ffill())) #'transform' fills the nan values with substraction
-##
-dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country'],dvac['nan_values']]).diff(-1)*(-1))
-                                             .replace(-0, np.nan) 
-                                             .shift(1) 
-                                             .groupby([dvac['country']]).transform(lambda x:x.ffill()))
 
-dvac.loc[dvac.total_vaccinations != np.nan, 'avg_nan2'] = ((dvac['fup'].groupby([dvac['country']]).diff(-1)*(-1))
-                                             .replace(-0, np.nan) 
-                                             .shift(1) 
-                                             .groupby([dvac['country']]).transform(lambda x:x.ffill()))
-##
-
-#dvac['dvr_new'] = round(dvac['avg_nan']/dvac['nan_values'], 4) #round 0 here returns error in MA
+# (5) proportional values
 dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values']) #.fillna(0)
-# dvac['dvr_new'] = np.where(dvac['nan_values'] == 0,
-#                            (dvac['avg_nan']/dvac['nan_values']).fillna(0),
-#                            dvac['dvr_new'].transform)
 
-#completing values with data from daily_vaccinations_raw
+# (6) completing values with data from daily_vaccinations_raw
 dvac.loc[dvac.nan_values == 0, 'dvr_new'] = dvac['daily_vaccinations_raw']
-dvac['dvr_new'] = np.where((dvac['country'] == 'Guinea') & (dvac['dvr_new'] == 0),
-                           np.nan,
-                           dvac['dvr_new'])  #change value for Guinea
 
-#moving avg
-#dvac.dvr_new.fillna(0, inplace = True) #first try
+# (7) moving avg
 dvac['MA'] = round(dvac.groupby('country')['dvr_new'] #groups by 'country' and uses 'dvr_new'
                    .rolling(window=7, min_periods=1) #takes 7 values. minimum 1 value for first values
                    .mean(), 0).reset_index(0,drop=True) #it's the avg. needs reset_index, otherwise it won't work
 
+# Difference
 dvac.loc[dvac.MA == 0, 'MA'] = np.nan
 
 dvac['diff'] = dvac['MA'] - dvac['daily_vaccinations']
@@ -191,7 +154,7 @@ def country_heatmap(country, df=dvac):
     #print(fig.layout)
     fig.show()
 
-country_heatmap('Russia')
+country_heatmap('Colombia')
 
 ######
 ### Find the max number of people vaccinated as of the most recent date
