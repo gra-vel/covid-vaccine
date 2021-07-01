@@ -40,11 +40,18 @@ df.loc[df.groupby(['country'])['date'].idxmax()]
 dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
            'daily_vaccinations_raw', 'daily_vaccinations']].copy() #important to use copy, otherwise SettingwithCopyWarning pops up
 
-dvac['test'] = dvac.total_vaccinations.groupby(dvac.total_vaccinations).diff(1) == 0
+dvac['test'] = dvac.total_vaccinations.groupby([dvac['country'],dvac['total_vaccinations']]).diff(1) == 0
 
+dvac['test'].fillna(method='bfill', inplace=True)
 
+#
+#dvac.loc[dvac['test'] == True, 'total_vaccinations'].fillna(method='backfill', inplace=True)
 
-dvac.loc[dvac['test'] == True, 'total_vaccinations'] = dvac['total_vaccinations'].transform(lambda x:x.fillna(method='bfill'))
+dvac.loc[dvac['test'] == True, 'total_vaccinations'] = ((dvac['total_vaccinations'].groupby([dvac['country'], dvac['test']]))
+                                                        .transform(lambda x:x.bfill()))
+
+#
+#dvac.loc[dvac['test'] == True, 'total_vaccinations'] = dvac['total_vaccinations'].transform(lambda x:x.fillna(method='bfill'))
 
 # (2) filling values upwards in total_vaccinations by country 
 dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])               
@@ -67,8 +74,11 @@ dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country
                                              .shift(1) #'shift' changes result to one row foward
                                              .groupby([dvac['country']]).transform(lambda x:x.ffill())) #'transform' fills the nan values with substraction
 
+
 # (5) proportional values
 dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values']) #.fillna(0)
+#zdes' mozhet rabotat' linya 50 c izmenenyami
+#dvac.loc[dvac['fup'].isna(), 'dvr_new'] = np.nan
 
 # (6) completing values with data from daily_vaccinations_raw
 dvac.loc[dvac.nan_values == 0, 'dvr_new'] = dvac['daily_vaccinations_raw']
@@ -83,7 +93,9 @@ dvac.loc[dvac.MA == 0, 'MA'] = np.nan
 
 dvac['diff'] = dvac['MA'] - dvac['daily_vaccinations']
 
-df1 = dvac[~dvac.MA.isin(df.daily_vaccinations)]
+df1 = dvac.loc[dvac['diff'] != 0]
+
+df1 = dvac[~dvac.MA.isin(dvac.daily_vaccinations)]
 
 ### Monthly heatmap
 dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
