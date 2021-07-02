@@ -36,29 +36,25 @@ df.isnull().sum()
 df['country'].head()
 df.loc[df.groupby(['country'])['date'].idxmax()]
 
-### (1) Daily vaccinations and daily vaccinations raw
+################
+# (1) Daily vaccinations and daily vaccinations raw
 dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
            'daily_vaccinations_raw', 'daily_vaccinations']].copy() #important to use copy, otherwise SettingwithCopyWarning pops up
 
+# Finding same consecutive values in 'total_vaccinations'
 dvac['test'] = dvac.total_vaccinations.groupby([dvac['country'],dvac['total_vaccinations']]).diff(1) == 0
 
+# Filling gaps of missing values between same consecutive values in 'test' and 'total_vaccinations'
 dvac['test'].fillna(method='bfill', inplace=True)
-
-#
-#dvac.loc[dvac['test'] == True, 'total_vaccinations'].fillna(method='backfill', inplace=True)
 
 dvac.loc[dvac['test'] == True, 'total_vaccinations'] = ((dvac['total_vaccinations'].groupby([dvac['country'], dvac['test']]))
                                                         .transform(lambda x:x.bfill()))
 
-#
-#dvac.loc[dvac['test'] == True, 'total_vaccinations'] = dvac['total_vaccinations'].transform(lambda x:x.fillna(method='bfill'))
-
-# (2) filling values upwards in total_vaccinations by country 
+# (2) Creates new variable from 'total_vaccinations' grouped by country
 dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])               
                .transform(lambda x:x.bfill())) #back fill -- fills back 'total_vaccinations' by group 'country'
 
-### este funka!!!!! igual hay un problema con avg_nan, xq necesita usar fup. Por eso esa funcino todavia
-#esta antes. es el groupby q hace fup con valores contiguos q son los mismos
+# Counts the number of consecutive missing values 
 dvac['nan_values'] = (dvac.total_vaccinations.isnull().astype(int).groupby(dvac.total_vaccinations.notnull().astype(int).cumsum())
                       .transform('sum')
                       .transform(lambda x:x+1 if x != 0 else 0)
@@ -66,30 +62,31 @@ dvac['nan_values'] = (dvac.total_vaccinations.isnull().astype(int).groupby(dvac.
 
 # (3) identifying na values in 'total vaccinations'
 
-
-
-# (4) substracting new values from inmediate previous. 
+# (4) Calculates difference from consecutive unique different values in 'fup'
 dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country']]).diff(-1)*(-1)) #'diff' calculates difference between rows. multiply by minus 1 to get positive result. can try abs())
                                              .replace(-0, np.nan) #'replace' removes 0's with nan
                                              .shift(1) #'shift' changes result to one row foward
                                              .groupby([dvac['country']]).transform(lambda x:x.ffill())) #'transform' fills the nan values with substraction
 
-
-# (5) proportional values
+# (5) Divides the difference by the number of missing values
 dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values']) #.fillna(0)
-#zdes' mozhet rabotat' linya 50 c izmenenyami
-#dvac.loc[dvac['fup'].isna(), 'dvr_new'] = np.nan
 
-# (6) completing values with data from daily_vaccinations_raw
+# (6) Substitutes values with data from 'daily_vaccinations_raw'
 dvac.loc[dvac.nan_values == 0, 'dvr_new'] = dvac['daily_vaccinations_raw']
+
+# Sets values to zero based on variable 'test'
+dvac.loc[dvac.test == True, 'dvr_new'] = 0
 
 # (7) moving avg
 dvac['MA'] = round(dvac.groupby('country')['dvr_new'] #groups by 'country' and uses 'dvr_new'
                    .rolling(window=7, min_periods=1) #takes 7 values. minimum 1 value for first values
                    .mean(), 0).reset_index(0,drop=True) #it's the avg. needs reset_index, otherwise it won't work
 
+# If 'fup' is a missing value, 'MA' also turns to a missing value
+dvac.loc[dvac.fup.isna(), 'MA'] = np.nan
+
 # Difference
-dvac.loc[dvac.MA == 0, 'MA'] = np.nan
+#dvac.loc[dvac.MA == 0, 'MA'] = np.nan
 
 dvac['diff'] = dvac['MA'] - dvac['daily_vaccinations']
 
@@ -97,6 +94,7 @@ df1 = dvac.loc[dvac['diff'] != 0]
 
 df1 = dvac[~dvac.MA.isin(dvac.daily_vaccinations)]
 
+################
 ### Monthly heatmap
 dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
            'daily_vaccinations_raw', 'daily_vaccinations']].copy()
