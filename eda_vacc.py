@@ -7,6 +7,7 @@ Este es un archivo temporal.
 import pandas as pd
 import numpy as np
 import datetime
+import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
@@ -25,6 +26,7 @@ file_path = "country_vaccinations.csv\country_vaccinations.csv"
 #file_path = "country_vaccinations.csv\country_vaccinations2.csv"
 #file_path = "country_vaccinations.csv\country_vaccinations3.csv"
 #file_path = "country_vaccinations.csv\country_vaccinations4.csv"
+#file_path = "country_vaccinations.csv\country_vaccinations5.csv"
 df = pd.read_csv(file_path)
 
 df.shape
@@ -164,9 +166,9 @@ def country_heatmap(country, df=dvac):
     #print(fig.layout)
     fig.show()
 
-country_heatmap('Colombia')
+country_heatmap('Ecuador')
 
-######
+################
 ### Find the max number of people vaccinated as of the most recent date
 # Columns for country, date and total vaccinates
 df['country'].nunique()
@@ -210,7 +212,7 @@ total_per_country = (total_per_country[total_per_country.groupby(['country'])['d
                                       .transform(max) == total_per_country['date']]
                      .dropna()
                      .reset_index(drop=True))
-
+################
 ### Vaccines per country
 vaccine_per_country = df[['country', 'vaccines']].copy()
 vaccine_per_country.drop_duplicates(keep='first', inplace=True)
@@ -225,20 +227,24 @@ vaccine_per_country = vaccine_per_country.join(vaccine_series)
 
 ### Merging two datasets
 vaccined_people = pd.merge(vaccine_per_country, total_per_country, how='left', on='country')
+
+#number of countries using each type of vaccine
 vaccined_people.groupby('vaccines')['country'].count()
+
+#mean for each vaccine
 #vaccined_people.groupby('vaccines')['people_fully_vaccinated'].mean()
 vaccined_people.groupby('vaccines')['people_fully_vaccinated_per_hundred'].mean()
 
+#getting iso code for countries
 vaccined_people2 = pd.merge(vaccined_people, df[['country','iso_code']].copy().drop_duplicates(), 
                             how='left', on='country')
 vaccined_people2['valz'] = 1
 
-
 # separate total vaccinated and max date. merge them
-df1 = df[['country', 'date', 'people_fully_vaccinated']]
-total_per_country.fillna(method='ffill', inplace=True)
-total_per_country.loc[total_per_country.groupby(['country'])['people_fully_vaccinated'].idxmax()]
-total_per_country.groupby(['country'], sort=False)['date'].max()
+# df1 = df[['country', 'date', 'people_fully_vaccinated']]
+# total_per_country.fillna(method='ffill', inplace=True)
+# total_per_country.loc[total_per_country.groupby(['country'])['people_fully_vaccinated'].idxmax()]
+# total_per_country.groupby(['country'], sort=False)['date'].max()
 
 ### Choropleth map
 vaccines_list = vaccined_people2['vaccines'].drop_duplicates().to_list()
