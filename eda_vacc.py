@@ -16,27 +16,16 @@ import sys
 
 sys.exit("Noooooo!. Con el F9")
 
-"""
-- Zdes' mozhno razdelit' strany za ispolsuemuyu vaktsinu. Nuzhno ispol'zovat' razdelenye str.
-S etoy informatsiyei, mozhno vyasnit' kto postavit' bol'sche vaktsinii
-- Tile graph (geom_tile) in plotly. Dni v mesyatsyakh
-"""
-
+################
 file_path = "country_vaccinations.csv\country_vaccinations.csv"
-#file_path = "country_vaccinations.csv\country_vaccinations2.csv"
-#file_path = "country_vaccinations.csv\country_vaccinations3.csv"
-#file_path = "country_vaccinations.csv\country_vaccinations4.csv"
 #file_path = "country_vaccinations.csv\country_vaccinations5.csv"
 df = pd.read_csv(file_path)
 
 df.shape
-df.info
+df.head()
 df.columns
-df['total_vaccinations'].describe()
-df.isnull().sum()
 
-df['country'].head()
-df.loc[df.groupby(['country'])['date'].idxmax()]
+df.isnull().sum()
 
 ################
 # (1) Daily vaccinations and daily vaccinations raw
@@ -291,10 +280,5 @@ fig.update_layout(title=f"<b>Countries using {first_title}</b>",title_x=0.5,
                   showlegend = False)
 
 fig.show()
-
-
-
-
-
 
 
