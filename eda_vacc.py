@@ -45,13 +45,12 @@ dvac.loc[dvac['test'] == True, 'total_vaccinations'] = ((dvac['total_vaccination
 dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])               
                .transform(lambda x:x.bfill())) #back fill -- fills back 'total_vaccinations' by group 'country'
 
+# (3) identifying nan values in 'total vaccinations'
 # Counts the number of consecutive missing values 
 dvac['nan_values'] = (dvac.total_vaccinations.isnull().astype(int).groupby(dvac.total_vaccinations.notnull().astype(int).cumsum())
                       .transform('sum')
                       .transform(lambda x:x+1 if x != 0 else 0)
                       .shift(1))
-
-# (3) identifying na values in 'total vaccinations'
 
 # (4) Calculates difference from consecutive unique different values in 'fup'
 dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country']]).diff(-1)*(-1)) #'diff' calculates difference between rows. multiply by minus 1 to get positive result. can try abs())
@@ -60,7 +59,7 @@ dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country
                                              .groupby([dvac['country']]).transform(lambda x:x.ffill())) #'transform' fills the nan values with substraction
 
 # (5) Divides the difference by the number of missing values
-dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values']) #.fillna(0)
+dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values'])
 
 # (6) Substitutes values with data from 'daily_vaccinations_raw'
 dvac.loc[dvac.nan_values == 0, 'dvr_new'] = dvac['daily_vaccinations_raw']
