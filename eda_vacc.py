@@ -76,13 +76,9 @@ dvac['MA'] = round(dvac.groupby('country')['avg_filltv'] #groups by 'country' an
 dvac.loc[dvac.filltv.isna(), 'MA'] = np.nan
 
 # Difference
-#dvac.loc[dvac.MA == 0, 'MA'] = np.nan
-
 dvac['diff'] = dvac['MA'] - dvac['daily_vaccinations']
 
 df1 = dvac.loc[dvac['diff'] != 0]
-
-df1 = dvac[~dvac.MA.isin(dvac.daily_vaccinations)]
 
 ################
 ### Monthly heatmap
@@ -91,21 +87,24 @@ dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people
 
 def country_heatmap(country, df=dvac):
     df = df.loc[df['country'] == country].copy()
+    
     # time period
     df['date'] = pd.to_datetime(df['date']).apply(lambda x: x.date())
     start_date = min(df['date'])
     last_date = max(df['date'])
     timeperiod = last_date-start_date
+    
     # weekdays and week number
-    country_calendar = [start_date + datetime.timedelta(i) for i in range(timeperiod.days+1)]
+    country_calendar = [start_date + datetime.timedelta(i) for i in range(timeperiod.days+1)] #list with days in timeperiod
     weekdays = [i.weekday() for i in country_calendar]
     weeknumber = [(i.strftime('%V')) for i in country_calendar]
-    #z
+    
+    # daily vaccinations data
     vc = df['daily_vaccinations']
-    vcr = df['daily_vaccinations_raw']
-    #annotation
+    vcr = df['daily_vaccinations_raw']    
     text = [str(i) for i in country_calendar]
-    #subplots
+    
+    # subplots
     fig = make_subplots(1,2, 
                         shared_yaxes=False,
                         subplot_titles=('daily_vaccinations','daily_vaccinations_raw'))
@@ -136,10 +135,12 @@ def country_heatmap(country, df=dvac):
     
     fig.update_layout(
         title = country,
+        title_font_size = 20,
+        title_y = 0.98,        
         plot_bgcolor = ('rgb(255,255,255)')
         )
-    fig.layout.annotations[0].update(y=1.05)
-    fig.layout.annotations[1].update(y=1.05)
+    fig.layout.annotations[0].update(y=1.03)
+    fig.layout.annotations[1].update(y=1.03)
     fig.update_xaxes(
         tickmode="array",
         ticktext=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
