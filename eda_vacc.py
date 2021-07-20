@@ -18,7 +18,7 @@ sys.exit("Noooooo!. Con el F9")
 
 ################
 file_path = "country_vaccinations.csv\country_vaccinations.csv"
-#file_path = "country_vaccinations.csv\country_vaccinations5.csv"
+#file_path = "country_vaccinations.csv\country_vaccinations6.csv"
 df = pd.read_csv(file_path)
 
 df.shape
@@ -33,16 +33,16 @@ dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people
            'daily_vaccinations_raw', 'daily_vaccinations']].copy() #important to use copy, otherwise SettingwithCopyWarning pops up
 
 # Finding same consecutive values in 'total_vaccinations'
-dvac['test'] = dvac.total_vaccinations.groupby([dvac['country'],dvac['total_vaccinations']]).diff(1) == 0
+dvac['csc_value'] = dvac.total_vaccinations.groupby([dvac['country'],dvac['total_vaccinations']]).diff(1) == 0
 
 # Filling gaps of missing values between same consecutive values in 'test' and 'total_vaccinations'
-dvac['test'].fillna(method='bfill', inplace=True)
+dvac['csc_value'].fillna(method='bfill', inplace=True)
 
-dvac.loc[dvac['test'] == True, 'total_vaccinations'] = ((dvac['total_vaccinations'].groupby([dvac['country'], dvac['test']]))
+dvac.loc[dvac['csc_value'] == True, 'total_vaccinations'] = ((dvac['total_vaccinations'].groupby([dvac['country'], dvac['csc_value']]))
                                                         .transform(lambda x:x.bfill()))
 
 # (2) Creates new variable from 'total_vaccinations' grouped by country
-dvac['fup'] = (dvac['total_vaccinations'].groupby(dvac['country'])               
+dvac['filltv'] = (dvac['total_vaccinations'].groupby(dvac['country'])               
                .transform(lambda x:x.bfill())) #back fill -- fills back 'total_vaccinations' by group 'country'
 
 # (3) identifying nan values in 'total vaccinations'
@@ -53,27 +53,27 @@ dvac['nan_values'] = (dvac.total_vaccinations.isnull().astype(int).groupby(dvac.
                       .shift(1))
 
 # (4) Calculates difference from consecutive unique different values in 'fup'
-dvac.loc[dvac.nan_values != 0, 'avg_nan'] = ((dvac['fup'].groupby([dvac['country']]).diff(-1)*(-1)) #'diff' calculates difference between rows. multiply by minus 1 to get positive result. can try abs())
+dvac.loc[dvac.nan_values != 0, 'diff_filltv'] = ((dvac['filltv'].groupby([dvac['country']]).diff(-1)*(-1)) #'diff' calculates difference between rows. multiply by minus 1 to get positive result. can try abs())
                                              .replace(-0, np.nan) #'replace' removes 0's with nan
                                              .shift(1) #'shift' changes result to one row foward
                                              .groupby([dvac['country']]).transform(lambda x:x.ffill())) #'transform' fills the nan values with substraction
 
 # (5) Divides the difference by the number of missing values
-dvac['dvr_new'] = (dvac['avg_nan']/dvac['nan_values'])
+dvac['avg_filltv'] = (dvac['diff_filltv']/dvac['nan_values'])
 
 # (6) Substitutes values with data from 'daily_vaccinations_raw'
-dvac.loc[dvac.nan_values == 0, 'dvr_new'] = dvac['daily_vaccinations_raw']
+dvac.loc[dvac.nan_values == 0, 'avg_filltv'] = dvac['daily_vaccinations_raw']
 
 # Sets values to zero based on variable 'test'
-dvac.loc[dvac.test == True, 'dvr_new'] = 0
+dvac.loc[dvac.csc_value == True, 'avg_filltv'] = 0
 
 # (7) moving avg
-dvac['MA'] = round(dvac.groupby('country')['dvr_new'] #groups by 'country' and uses 'dvr_new'
+dvac['MA'] = round(dvac.groupby('country')['avg_filltv'] #groups by 'country' and uses 'dvr_new'
                    .rolling(window=7, min_periods=1) #takes 7 values. minimum 1 value for first values
                    .mean(), 0).reset_index(0,drop=True) #it's the avg. needs reset_index, otherwise it won't work
 
 # If 'fup' is a missing value, 'MA' also turns to a missing value
-dvac.loc[dvac.fup.isna(), 'MA'] = np.nan
+dvac.loc[dvac.filltv.isna(), 'MA'] = np.nan
 
 # Difference
 #dvac.loc[dvac.MA == 0, 'MA'] = np.nan
@@ -91,12 +91,12 @@ dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people
 
 def country_heatmap(country, df=dvac):
     df = df.loc[df['country'] == country].copy()
-    #time period
+    # time period
     df['date'] = pd.to_datetime(df['date']).apply(lambda x: x.date())
     start_date = min(df['date'])
     last_date = max(df['date'])
     timeperiod = last_date-start_date
-    #weekdays and week number
+    # weekdays and week number
     country_calendar = [start_date + datetime.timedelta(i) for i in range(timeperiod.days+1)]
     weekdays = [i.weekday() for i in country_calendar]
     weeknumber = [(i.strftime('%V')) for i in country_calendar]
@@ -150,11 +150,10 @@ def country_heatmap(country, df=dvac):
     fig.update_yaxes(
         title="Week Nr.",
         autorange="reversed"
-        )
-    #print(fig.layout)
+        )    
     fig.show()
 
-country_heatmap('Ecuador')
+country_heatmap('France')
 
 ################
 ### Find the max number of people vaccinated as of the most recent date
