@@ -18,7 +18,7 @@ sys.exit("Noooooo!. Con el F9")
 
 ################
 file_path = "country_vaccinations.csv\country_vaccinations.csv"
-#file_path = "country_vaccinations.csv\country_vaccinations6.csv"
+#file_path = "country_vaccinations.csv\country_vaccinations5.csv"
 df = pd.read_csv(file_path)
 
 df.shape
@@ -157,28 +157,6 @@ def country_heatmap(country, df=dvac):
 country_heatmap('France')
 
 ################
-### Find the max number of people vaccinated as of the most recent date
-# Columns for country, date and total vaccinates
-df['country'].nunique()
-total_per_country = df[['country', 'date', 'people_fully_vaccinated']].copy()
-
-# Filling empty values by group with foward fill (ffill)
-total_per_country['people_fully_vaccinated'] = (total_per_country['people_fully_vaccinated'].groupby(total_per_country['country'])
-                                                .transform(lambda x:x.ffill()))
-
-# Filtering na values
-total_per_country.dropna(inplace=True)
-
-# line chart
-# fig = px.line(total_per_country, x='date', y='people_fully_vaccinated', color='country')
-# fig.show()
-
-# Filtering latest date
-total_per_country = (total_per_country[total_per_country.groupby(['country'])['date']
-                                      .transform(max) == total_per_country['date']]
-                     .dropna()
-                     .reset_index(drop=True))
-
 ### Find the max number of people vaccinated per 100 as of the most recent date
 # Columns for country, date and total vaccinates
 df['country'].nunique()
@@ -191,15 +169,20 @@ total_per_country['people_fully_vaccinated_per_hundred'] = (total_per_country['p
 # Filtering na values
 total_per_country.dropna(inplace=True)
 
+df_southa = total_per_country[total_per_country['country'].isin(['Argentina','Bolivia','Brasil','Chile','Colombia','Ecuador','Paraguay','Peru','Uruguay','Venezuela'])]
+df_northa = total_per_country[total_per_country['country'].isin(['Canada','Mexico','United States'])]
+#df_westeurope = total_per_country[total_per_country['country'].isin(['Belgium','Denmark','France','Germany','Ireland','Italy','Netherlands','Portugal','Spain','United Kingdom'])]
+
 # line chart
-# fig = px.line(total_per_country, x='date', y='people_fully_vaccinated_per_hundred', color='country')
-# fig.show()
+fig = px.line(df_southa, x='date', y='people_fully_vaccinated_per_hundred', color='country')
+fig.show()
 
 # Filtering latest date
 total_per_country = (total_per_country[total_per_country.groupby(['country'])['date']
                                       .transform(max) == total_per_country['date']]
                      .dropna()
                      .reset_index(drop=True))
+
 ################
 ### Vaccines per country
 vaccine_per_country = df[['country', 'vaccines']].copy()
@@ -213,6 +196,7 @@ vaccine_series.name = 'vaccines'
 vaccine_per_country.drop(columns=['vaccines'], inplace=True)
 vaccine_per_country = vaccine_per_country.join(vaccine_series)
 
+"""
 ### Merging two datasets
 vaccined_people = pd.merge(vaccine_per_country, total_per_country, how='left', on='country')
 
@@ -222,17 +206,20 @@ vaccined_people.groupby('vaccines')['country'].count()
 #mean for each vaccine
 #vaccined_people.groupby('vaccines')['people_fully_vaccinated'].mean()
 vaccined_people.groupby('vaccines')['people_fully_vaccinated_per_hundred'].mean()
+"""
 
 #getting iso code for countries
-vaccined_people2 = pd.merge(vaccined_people, df[['country','iso_code']].copy().drop_duplicates(), 
+vaccined_people2 = pd.merge(vaccine_per_country, df[['country','iso_code']].copy().drop_duplicates(), #vaccined_people instead of vaccine_per_country
                             how='left', on='country')
 vaccined_people2['valz'] = 1
 
+"""
 # separate total vaccinated and max date. merge them
 # df1 = df[['country', 'date', 'people_fully_vaccinated']]
 # total_per_country.fillna(method='ffill', inplace=True)
 # total_per_country.loc[total_per_country.groupby(['country'])['people_fully_vaccinated'].idxmax()]
 # total_per_country.groupby(['country'], sort=False)['date'].max()
+"""
 
 ### Choropleth map
 vaccines_list = vaccined_people2['vaccines'].drop_duplicates().to_list()
