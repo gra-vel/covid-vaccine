@@ -196,47 +196,27 @@ vaccine_series.name = 'vaccines'
 vaccine_per_country.drop(columns=['vaccines'], inplace=True)
 vaccine_per_country = vaccine_per_country.join(vaccine_series)
 
-"""
-### Merging two datasets
-vaccined_people = pd.merge(vaccine_per_country, total_per_country, how='left', on='country')
-
-#number of countries using each type of vaccine
-vaccined_people.groupby('vaccines')['country'].count()
-
-#mean for each vaccine
-#vaccined_people.groupby('vaccines')['people_fully_vaccinated'].mean()
-vaccined_people.groupby('vaccines')['people_fully_vaccinated_per_hundred'].mean()
-"""
-
 #getting iso code for countries
-vaccined_people2 = pd.merge(vaccine_per_country, df[['country','iso_code']].copy().drop_duplicates(), #vaccined_people instead of vaccine_per_country
+vaccine_per_country = pd.merge(vaccine_per_country, df[['country','iso_code']].copy().drop_duplicates(), 
                             how='left', on='country')
-vaccined_people2['valz'] = 1
-
-"""
-# separate total vaccinated and max date. merge them
-# df1 = df[['country', 'date', 'people_fully_vaccinated']]
-# total_per_country.fillna(method='ffill', inplace=True)
-# total_per_country.loc[total_per_country.groupby(['country'])['people_fully_vaccinated'].idxmax()]
-# total_per_country.groupby(['country'], sort=False)['date'].max()
-"""
+vaccine_per_country['valz'] = 1
 
 ### Choropleth map
-vaccines_list = vaccined_people2['vaccines'].drop_duplicates().to_list()
+vaccines_list = vaccine_per_country['vaccines'].drop_duplicates().to_list()
 visible = np.array(vaccines_list)
-vaccined_people2['text'] = 'Country: ' + vaccined_people2['country'] + '<br>' + 'Vaccine: ' + vaccined_people2['vaccines']
+vaccine_per_country['text'] = 'Country: ' + vaccine_per_country['country'] + '<br>' + 'Vaccine: ' + vaccine_per_country['vaccines']
 
 traces = []
 buttons = []
 for vac in vaccines_list:
     traces.append(go.Choropleth(
-        locations = vaccined_people2.loc[vaccined_people2.vaccines==vac]['iso_code'],
-        z = vaccined_people2.loc[vaccined_people2.vaccines==vac]['valz'],
+        locations = vaccine_per_country.loc[vaccine_per_country.vaccines==vac]['iso_code'],
+        z = vaccine_per_country.loc[vaccine_per_country.vaccines==vac]['valz'],
         coloraxis = 'coloraxis',
         colorscale = 'Blues',
         autocolorscale = False,
         marker_line_color = 'white',
-        hovertemplate=vaccined_people2.loc[vaccined_people2.vaccines==vac]['text'] + '<extra></extra>',
+        hovertemplate=vaccine_per_country.loc[vaccine_per_country.vaccines==vac]['text'] + '<extra></extra>',
         visible = True if vac == vaccines_list[0] else False))
     
     buttons.append(dict(label=vac,
