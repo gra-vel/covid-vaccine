@@ -174,7 +174,18 @@ df_northa = total_per_country[total_per_country['country'].isin(['Canada','Mexic
 #df_westeurope = total_per_country[total_per_country['country'].isin(['Belgium','Denmark','France','Germany','Ireland','Italy','Netherlands','Portugal','Spain','United Kingdom'])]
 
 # line chart
-fig = px.line(df_southa, x='date', y='people_fully_vaccinated_per_hundred', color='country')
+fig = px.line(df_southa, x='date', y='people_fully_vaccinated_per_hundred', color='country', text='country')
+
+fig.update_traces(mode='markers+lines',
+                  hovertemplate=
+                  '<b>%{text}</b><br>'+
+                  'Fully vaccinated per 100: <b>%{y:.2f}</b><br>'+
+                  '<extra>%{x}</extra>')
+
+fig.update_layout(    
+    hoverlabel=dict(font_size=12), 
+    hovermode='x')
+
 fig.show()
 
 # Filtering latest date
