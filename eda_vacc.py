@@ -29,13 +29,13 @@ df.isnull().sum()
 
 ################
 # (1) Daily vaccinations and daily vaccinations raw
-dvac = df[['country', 'date', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated',
+dvac = df[['country', 'date', 'total_vaccinations', 
            'daily_vaccinations_raw', 'daily_vaccinations']].copy() #important to use copy, otherwise SettingwithCopyWarning pops up
 
 # Finding same consecutive values in 'total_vaccinations'
 dvac['csc_value'] = dvac.total_vaccinations.groupby([dvac['country'],dvac['total_vaccinations']]).diff(1) == 0
 
-# Filling gaps of missing values between same consecutive values in 'test' and 'total_vaccinations'
+# Filling gaps of missing values between same consecutive values in 'csc_value' and 'total_vaccinations'
 dvac['csc_value'].fillna(method='bfill', inplace=True)
 
 dvac.loc[dvac['csc_value'] == True, 'total_vaccinations'] = ((dvac['total_vaccinations'].groupby([dvac['country'], dvac['csc_value']]))
@@ -52,7 +52,7 @@ dvac['nan_values'] = (dvac.total_vaccinations.isnull().astype(int).groupby(dvac.
                       .transform(lambda x:x+1 if x != 0 else 0)
                       .shift(1))
 
-# (4) Calculates difference from consecutive unique different values in 'fup'
+# (4) Calculates difference from consecutive unique different values in 'filltv'
 dvac.loc[dvac.nan_values != 0, 'diff_filltv'] = ((dvac['filltv'].groupby([dvac['country']]).diff(-1)*(-1)) #'diff' calculates difference between rows. multiply by minus 1 to get positive result. can try abs())
                                              .replace(-0, np.nan) #'replace' removes 0's with nan
                                              .shift(1) #'shift' changes result to one row foward
@@ -78,7 +78,7 @@ dvac.loc[dvac.filltv.isna(), 'MA'] = np.nan
 # Difference
 dvac['diff'] = dvac['MA'] - dvac['daily_vaccinations']
 
-df1 = dvac.loc[dvac['diff'] != 0]
+df1 = dvac.loc[dvac['diff'].notna() & dvac['diff'] != 0]
 
 ################
 ### Monthly heatmap
