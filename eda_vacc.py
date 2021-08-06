@@ -182,9 +182,16 @@ fig.update_traces(mode='markers+lines',
                   'Fully vaccinated per 100: <b>%{y:.2f}</b><br>'+
                   '<extra>%{x}</extra>')
 
-fig.update_layout(    
+fig.update_layout(
+    title = 'Vaccination progress in South America',
+    title_font_size=20,
     hoverlabel=dict(font_size=12), 
-    hovermode='x')
+    hovermode='x'
+    )
+
+fig.update_yaxes(
+    title="People fully vaccinated per hundred"
+    )
 
 fig.show()
 
