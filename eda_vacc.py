@@ -12,13 +12,11 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 pio.renderers.default='browser'
-import sys
-
-sys.exit("Noooooo!. Con el F9")
 
 ################
 file_path = "country_vaccinations.csv\country_vaccinations.csv"
 #file_path = "country_vaccinations.csv\country_vaccinations5.csv"
+#file_path = "C:\\Users\G3\Documents\Gabriel\Profile\Projects\covid_vaccine\country_vaccinations\country_vaccinations7.csv"
 df = pd.read_csv(file_path)
 
 df.shape
