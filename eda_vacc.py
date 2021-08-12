@@ -169,7 +169,6 @@ total_per_country.dropna(inplace=True)
 
 df_southa = total_per_country[total_per_country['country'].isin(['Argentina','Bolivia','Brasil','Chile','Colombia','Ecuador','Paraguay','Peru','Uruguay','Venezuela'])]
 df_northa = total_per_country[total_per_country['country'].isin(['Canada','Mexico','United States'])]
-#df_westeurope = total_per_country[total_per_country['country'].isin(['Belgium','Denmark','France','Germany','Ireland','Italy','Netherlands','Portugal','Spain','United Kingdom'])]
 
 # line chart
 fig = px.line(df_southa, x='date', y='people_fully_vaccinated_per_hundred', color='country', text='country')
